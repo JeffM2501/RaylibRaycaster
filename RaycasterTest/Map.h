@@ -2,11 +2,12 @@
 
 #include "raylib.h"
 #include "raylibExtras.h"
+#include "raymath.h"
 #include <cstdint>
 #include <memory>
 #include <map>
 #include <vector>
-
+#include <deque>
 
 enum class Directions
 {
@@ -46,6 +47,7 @@ public:
 class RenderCell
 {
 public:
+	int Index = 0;
 	std::map<Directions,uint16_t> RenderFaces;
 	GridCell* MapCell;
 	Rectangle Bounds;
@@ -53,6 +55,37 @@ public:
 	bool checkedForHit;
 	bool hitCell;
 	bool currentCell;
+};
+
+class RayCast
+{
+public:
+	Vector2 Ray;
+	RenderCell* target;
+
+	RayCast() {}
+	RayCast( Vector2 ray ) : Ray(ray){ }
+
+	typedef std::shared_ptr<RayCast> Ptr;
+};
+
+class RaySet
+{
+public:
+	RayCast::Ptr Positive;
+	RayCast::Ptr Negative;
+
+
+	inline void Bisect(RaySet& posSide, RaySet& negSide)
+	{
+		RayCast::Ptr center = std::make_shared<RayCast>(Vector2Normalize(Vector2Add(Positive->Ray, Negative->Ray)));
+
+		posSide.Positive = Positive;
+		posSide.Negative = center;
+
+		negSide.Positive = center;
+		negSide.Negative = Negative;
+	}
 };
 
 class MapRenderer
@@ -71,6 +104,9 @@ public:
 	void CleanUp();
 
 	RenderCell* GetCell(int x, int y);
+	RenderCell* GetCell(float x, float y);
+
+	void ComputeVisibility(const Camera& camera, float fovX);
 
 	void Draw();
 	void DrawMiniMap(int posX, int posY, int scale, Camera& camera, float fovX);
@@ -91,5 +127,13 @@ private:
 	uint16_t GetModelFromCache(size_t hash, std::map<size_t, uint16_t>& cache, Mesh& mesh);
 
 	bool PointInCell(Vector2& postion, float radius, RenderCell* cellPtr);
+
+	void CastRays(Vector2& origin);
+	void GetTarget(RayCast::Ptr ray, Vector2& origin);
+
+	void AddVisCell(RenderCell* cell);
+
+	std::deque< RaySet> PendingRayCasts;
+	std::map<int,RenderCell*> VisibleCells;
 };
 

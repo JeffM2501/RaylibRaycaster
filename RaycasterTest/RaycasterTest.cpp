@@ -4,6 +4,7 @@
 
 #include "RaycasterTest.h"
 #include "raylib.h"
+#include "raymath.h"
 #include "ResourceManager.h"
 #include "Map.h"
 
@@ -30,13 +31,10 @@ void DoMain()
     int screenHeight = 980;
    
     Color textColor(LIGHTGRAY);
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitWindow(screenWidth, screenHeight, "Raylib Raycaster test");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     ResourceManager::Setup("assets/");
-
-    const Texture& img = ResourceManager::GetTexture("textures/wall/tile050.png");
-
     const Image& mapImage = ResourceManager::GetImage("cubicmap.png");
 
     float scale = 1;
@@ -88,21 +86,23 @@ void DoMain()
             //----------------------------------------------------------------------------------
             BeginDrawing();
 
-            ClearBackground(RAYWHITE);
+            ClearBackground(BLACK);
 
 			BeginMode3D(camera);
 
-            // TODO, vis and stuff
+            renderer.ComputeVisibility(camera, fovX);
             renderer.Draw();
 
-            DrawGizmo(Vector3{ 0, 0, 0 });
+            Vector3 camVec = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+
+            DrawGizmo(Vector3{ 2 * scale, 0.1f * scale, 2 * scale });
 			EndMode3D();
 
             DrawFPS(10, height - 30);
             DrawVector3Text(&camera.position, width-10, height-30, true);
 
-            renderer.DrawMiniMap(0, 0, 10, camera, fovX);
-            renderer.DrawMiniMapZoomed(width - (5 * 50), 0, 50, camera, fovX);
+            renderer.DrawMiniMap(0, 0, 5, camera, fovX);
+            renderer.DrawMiniMapZoomed(width - (5 * 25), 0, 25, camera, fovX);
 
             EndDrawing();
         }

@@ -451,10 +451,12 @@ void MapRenderer::Setup(CastMap::Ptr map, float scale)
 	RenderCells.resize(map->Cells.size());
 
 	std::map<Directions, std::map<size_t, uint16_t>> caches;
-	size_t count = 0;
+	int count = 0;
 	for(auto& cell : map->Cells)
 	{
 		RenderCellVecItr renderCell = RenderCells.begin() + count;
+		renderCell->Index = count;
+
 		++count;
 
 		renderCell->MapCell = &cell;
@@ -479,6 +481,11 @@ RenderCell* MapRenderer::GetCell(int x, int y)
 		return nullptr;
 
 	return &(*(RenderCells.begin() + (size_t(y) * size_t(MapPointer->Width) + x)));
+}
+
+RenderCell* MapRenderer::GetCell(float x, float y)
+{
+	return GetCell((int)std::floor(x), (int)std::floor(y));
 }
 
 bool MapRenderer::PointInCell(Vector2& postion, float radius, RenderCell* cellPtr)
@@ -545,6 +552,110 @@ bool MapRenderer::PointIsOpen(Vector3& postion, float radius)
  		return false;
 	
 	return true;
+}
+
+void MapRenderer::AddVisCell(RenderCell* cell)
+{
+	if (VisibleCells.find(cell->Index) == VisibleCells.end())
+		VisibleCells.emplace(cell->Index, cell);
+}
+
+void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2 &origin)
+{
+//	if (ray->target != nullptr)
+		return;
+
+	// walk the map, adding cells to the vis list if they are not in it
+	bool horizontal = fabs(ray->Ray.x) > fabs(ray->Ray.y);
+
+	float slope = 1;
+	if (horizontal)
+	{
+		if (ray->Ray.y == 0)
+			slope = 0;
+		else
+			slope = ray->Ray.x / ray->Ray.y;
+	}
+	else
+	{
+		if (ray->Ray.x == 0)
+			slope = 0;
+		else
+			slope = ray->Ray.y / ray->Ray.x;
+	}
+
+	Vector2 currentPos = origin;
+
+	RenderCell* walkcell = GetCell(currentPos.x, currentPos.y);
+	AddVisCell(walkcell);
+
+	float count = 0;
+	while (walkcell != nullptr && !walkcell->MapCell->Solid)
+	{
+		// get a new walk cell
+
+		count += 1.0f;
+		if (horizontal)
+		{
+		//	currentPos = Vector2Add(origin, Vector2(count,)
+		}
+		else
+		{
+
+		}
+
+		if (!walkcell->MapCell->Solid)
+			AddVisCell(walkcell);
+
+		ray->target = walkcell;
+	}
+}
+
+void MapRenderer::CastRays(Vector2& origin)
+{
+	while (!PendingRayCasts.empty())
+	{
+		RaySet set = PendingRayCasts.front();
+		PendingRayCasts.pop_front();
+
+		//if our rays aren't cast then cast them and get our targets
+		if (set.Positive->target == nullptr)
+			GetTarget(set.Positive, origin);
+
+		if (set.Negative->target == nullptr)
+			GetTarget(set.Negative, origin);
+
+		// both are hitting the same target, we are done
+		if (set.Positive->target == set.Negative->target)
+			return;
+
+		RaySet posSet;
+		RaySet negSeg;
+		set.Bisect(posSet, negSeg);
+
+		PendingRayCasts.push_back(posSet);
+		PendingRayCasts.push_back(negSeg);
+	}
+}
+
+void MapRenderer::ComputeVisibility(const Camera& camera, float fovX)
+{
+	VisibleCells.clear();
+
+	Vector2 mapCamera{ camera.position.x / DrawScale , camera.position.z / DrawScale };
+	Vector2 viewVector{ camera.target.x - camera.position.x,camera.target.z - camera.position.z };
+	viewVector = Vector2Normalize(viewVector);
+
+	Vector2 posFOV = Vector2Rotate(viewVector, fovX * 0.5f);
+	Vector2 negFov = Vector2Rotate(viewVector, -fovX * 0.5f);
+
+	// recursively raycast between vectors until we are done.
+	RaySet viewSet;
+	viewSet.Positive = std::make_shared<RayCast>(posFOV);
+	viewSet.Negative = std::make_shared<RayCast>(negFov);
+
+	PendingRayCasts.push_back(viewSet);
+	CastRays(mapCamera);
 }
 
 void MapRenderer::Draw()
