@@ -11,11 +11,72 @@
 #include <string>
 
 #include "raylib.h"
+#include "FPCamera.h"
+
+
+class Application
+{
+public:
+
+    Application();
+    virtual ~Application();
+
+    void Run();
+
+protected:
+    virtual void Setup();
+    virtual bool Update();
+    virtual void Cleanup();
+
+    virtual void UpdateInput();
+
+    virtual void Draw3D();
+    virtual void DrawHUD();
+
+    bool CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion);
+
+    CastMap::Ptr Map;
+    MapRenderer Renderer;
+    FPCamera ViewCamera;
+
+    Texture BackgroundImage;
+
+    Vector2i WindowSize = { 1280,720 };
+};
+
+void Run()
+{
+    Application app;
+    app.Run();
+}
+
+
+Application::Application()
+{
+
+}
+
+Application::~Application()
+{
+
+}
+
+void Application::Run()
+{
+    Setup();
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        if (!Update())
+            break;
+    }
+
+    Cleanup();
+}
 
 float ComputeFOV(Camera& camera)
 {
-	float width = (float)GetScreenWidth();
-	float height = (float)GetScreenHeight();
+    float width = (float)GetScreenWidth();
+    float height = (float)GetScreenHeight();
 
     if (height != 0)
         return camera.fovy * (width / height);
@@ -23,15 +84,10 @@ float ComputeFOV(Camera& camera)
     return 0;
 }
 
-void DoMain()
+void Application::Setup()
 {
-    // Initialization
-      //--------------------------------------------------------------------------------------
-    int screenWidth = 1920;
-    int screenHeight = 980;
-   
     Color textColor(LIGHTGRAY);
-    InitWindow(screenWidth, screenHeight, "Raylib Raycaster test");
+    InitWindow(WindowSize.x, WindowSize.y, "Raylib Raycaster test");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     ResourceManager::Setup("assets/");
@@ -39,84 +95,117 @@ void DoMain()
 
     float scale = 1;
 
-	Camera camera;
- 	camera.position = { scale * 2, scale / 2, scale * 2 };
- 	camera.target = { 0.0f, scale / 2, 1.0f };
- 	camera.up = { 0.0f, 1.0f, 0.0f };
-	camera.fovy = 45.0f;
-	camera.type = CAMERA_PERSPECTIVE;
-    float fovX = ComputeFOV(camera);
+    ViewCamera.ValidateMapPostion = std::bind(&Application::CheckMapPos, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-    SetCameraMode(camera, CAMERA_FIRST_PERSON); // Set a first person camera mode
+    ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 0, scale * 2 });
 
-    SetTargetFPS(60);
+    ViewCamera.MoveSpeed.z = 4; // units per second
+    ViewCamera.MoveSpeed.x = 2;
 
-    MapRenderer renderer;
-    CastMap::Ptr map = std::make_shared<CastMap>();
+    ViewCamera.ViewBobbleFreq = 20;
+    
+    SetTargetFPS(120);
 
-    size_t floorID = renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile098.png"));
-	size_t ceilingID = renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile128.png"));
-	size_t wallID = renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile065.png"));
+    Map = std::make_shared<CastMap>();
 
-    map->LoadFromImage(mapImage, scale, wallID, floorID, ceilingID);
+    size_t floorID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile098.png"));
+    size_t ceilingID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile128.png"));
+    size_t wallID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile065.png"));
 
-    renderer.Setup(map, scale);
+    Map->LoadFromImage(mapImage, scale, wallID, floorID, ceilingID);
+
+    Renderer.Setup(Map, scale);
     //--------------------------------------------------------------------------------------
 
-    int width = GetScreenWidth();
-    int height = GetScreenHeight();
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    WindowSize.x = GetScreenWidth();
+    WindowSize.y = GetScreenHeight();
+
+    BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
+}
+
+bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
+{
+    if (!Renderer.PointIsOpen(newPostion, 0.1f))
     {
-        if (IsWindowResized())
-        {
-            width = GetScreenWidth();
-            height = GetScreenHeight();
-            fovX = ComputeFOV(camera);
-        }
-
-        if (IsWindowReady())
-        {
-            if (IsKeyPressed(KEY_F10))
-                renderer.DrawEverything = !renderer.DrawEverything;
-
-            Vector3 pos = camera.position;
-            UpdateCamera(&camera);                  // Update camera
-            if (!renderer.PointIsOpen(camera.position, scale * 0.1f))
-                camera.position = pos;
-
-            // Draw
-            //----------------------------------------------------------------------------------
-            BeginDrawing();
-
-            ClearBackground(BLACK);
-
-			BeginMode3D(camera);
-
-            renderer.ComputeVisibility(camera, fovX);
-            renderer.Draw();
-
-            Vector3 camVec = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
-
-            DrawGizmo(Vector3{ 2 * scale, 0.1f * scale, 2 * scale });
-			EndMode3D();
-
-            DrawFPS(10, height - 30);
-            DrawVector3Text(&camera.position, width-10, height-30, true);
-
-            const char* text = TextFormat("C:%d,F:%d", renderer.DrawnCells,renderer.DrawnFaces);
-            DrawText(text, width/2, height - 30, 20, LIME);
-
-            renderer.DrawMiniMap(0, 0, 8, camera, fovX);
-            renderer.DrawMiniMapZoomed(width - (5 * 25), 0, 25, camera, fovX);
-
-            EndDrawing();
-        }
-        //----------------------------------------------------------------------------------
+        newPostion = oldPostion;
+        return false;
     }
 
-    renderer.CleanUp();
-	map = nullptr;
+    return true;
+}
+
+bool Application::Update()
+{
+    // Main game loop
+
+    if (IsWindowResized())
+    {
+        WindowSize.x = GetScreenWidth();
+        WindowSize.y = GetScreenHeight();
+        ViewCamera.ViewResized();
+    }
+
+    if (IsWindowReady())
+    {
+        UpdateInput();
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        Draw3D();
+        DrawHUD();
+
+        EndDrawing();
+    }
+    
+    return true;
+}
+
+void Application::UpdateInput()
+{
+    if (IsKeyPressed(KEY_F10))
+        Renderer.DrawEverything = !Renderer.DrawEverything;
+
+    ViewCamera.Update();
+}
+
+double frameTime = 0;
+void Application::Draw3D()
+{
+    DrawTexturePro(BackgroundImage, Rectangle{ 0,0,(float)BackgroundImage.width,(float)BackgroundImage.height }, Rectangle{ 0,0,(float)WindowSize.x,(float)WindowSize.y }, Vector2{ 0,0 }, 0, WHITE);
+
+    frameTime = GetTime();
+    BeginMode3D(ViewCamera.GetCamera());
+
+    Renderer.ComputeVisibility(ViewCamera.GetCamera(), ViewCamera.GetFOVX());
+    Renderer.Draw();
+
+    DrawGizmo(Vector3{ 2 * Renderer.GetDrawScale(), 0.1f * Renderer.GetDrawScale(), 2 * Renderer.GetDrawScale() });
+    EndMode3D();
+    frameTime = GetTime() - frameTime;
+}
+
+void Application::DrawHUD()
+{
+    DrawFPS(10, WindowSize.y - 30);
+
+    Vector3 pos = ViewCamera.GetCameraPosition();
+
+    DrawVector3Text(&pos, WindowSize.x - 10, WindowSize.y - 30, true);
+
+    DrawVector2Text(&ViewCamera.GetViewAngles(), WindowSize.x - 10, WindowSize.y - 50, true);
+
+    const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells/(double)Renderer.MapPointer->Cells.size()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
+    DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
+
+    Renderer.DrawMiniMap(0, 0, 8, ViewCamera.GetCamera(), ViewCamera.GetFOVX());
+    Renderer.DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, ViewCamera.GetCamera(), ViewCamera.GetFOVX());
+}
+
+void Application::Cleanup()
+{
+    Renderer.CleanUp();
+	Map = nullptr;
 
 	CloseWindow();
 }

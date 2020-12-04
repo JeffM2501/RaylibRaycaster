@@ -108,8 +108,8 @@ public:
 	void ComputeVisibility(const Camera& camera, float fovX);
 
 	void Draw();
-	void DrawMiniMap(int posX, int posY, int scale, Camera& camera, float fovX);
-	void DrawMiniMapZoomed(int posX, int posY, int scale, Camera& camera, float fovX);
+	void DrawMiniMap(int posX, int posY, int scale, const Camera& camera, float fovX);
+	void DrawMiniMapZoomed(int posX, int posY, int scale, const Camera& camera, float fovX);
 
 	size_t SetupTexture(size_t textureID);
 
@@ -119,6 +119,8 @@ public:
 
 	int DrawnCells = 0;
 	int DrawnFaces = 0;
+
+	inline float GetDrawScale() { return DrawScale; }
 
 private:
 	float DrawScale = 1.0f;
@@ -139,17 +141,21 @@ private:
 	void AddVisCell(RenderCell* cell);
 
 	void DrawCell(RenderCell* cell);
+	void DrawFaces();
 
 	std::deque<RaySet> PendingRayCasts;
 	std::vector<RaySet> DrawnRays;
 
 	std::map<int,RenderCell*> VisibleCells;
 
-	class DrawFace
+	class FaceDraw
 	{
 	public:
-		Vector3 Postion;
-		Directions FaceDir;
+		RenderCell* Cell;
+		Directions Dir;
 	};
+
+    std::map<uint16_t, std::vector<FaceDraw>> FacesToDraw;
+
 };
 

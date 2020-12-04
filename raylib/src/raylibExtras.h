@@ -52,6 +52,13 @@ RLAPI void DrawCircleF(float centerX, float centerY, float radius, Color color);
 RLAPI void DrawLineF(float startPosX, float startPosY, float endPosX, float endPosY, Color color);
 RLAPI void DrawRectangleF(float posX, float posY, float width, float height, Color color);
 
+
+typedef struct Vector2i
+{
+    int x;
+    int y;
+ } Vector2i;
+
 #if defined(__cplusplus)
 }
 #endif

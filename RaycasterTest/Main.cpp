@@ -1,5 +1,5 @@
-#include "framework.h"
 #include "RaycasterTest.h"
+#include "framework.h"
 
 #ifdef _WINDOWS
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
@@ -7,5 +7,5 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 int main()
 #endif
 {
-    DoMain();
+    Run();
 }

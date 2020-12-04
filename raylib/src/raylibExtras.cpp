@@ -28,6 +28,8 @@
 #include "raylibExtras.h"
 #include "utils.h"
 #include "rlgl.h"
+#include "camera.h"
+
 #include <stdlib.h>         // Required for: malloc(), free()
 
 void FreeData(void* data)

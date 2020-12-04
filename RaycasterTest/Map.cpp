@@ -357,14 +357,7 @@ void GenNorthMesh(Mesh* mesh, void* userData)
 
 MapRenderer::MapRenderer()
 {
-	DirectionMeshes[Directions::XNeg] = GenMeshCustom(&GenWestMesh, nullptr);
-	DirectionMeshes[Directions::XPos] = GenMeshCustom(&GenEastMesh, nullptr);
 
-	DirectionMeshes[Directions::ZNeg] = GenMeshCustom(&GenNorthMesh, nullptr);
-	DirectionMeshes[Directions::ZPos] = GenMeshCustom(&GenSouthMesh, nullptr);
-
-	DirectionMeshes[Directions::YPos] = GenMeshCustom(&GenCeilingMesh, nullptr);
-	DirectionMeshes[Directions::YNeg] = GenMeshCustom(&GenFloorMesh, nullptr);
 }
 
 MapRenderer::~MapRenderer()
@@ -431,6 +424,18 @@ Color ColorFromNormal(Vector3 normal, Vector3& lightVector, float ambient, float
 
 void MapRenderer::Setup(CastMap::Ptr map, float scale)
 {
+	if (DirectionMeshes.size() == 0)
+	{
+        DirectionMeshes[Directions::XNeg] = GenMeshCustom(&GenWestMesh, nullptr);
+        DirectionMeshes[Directions::XPos] = GenMeshCustom(&GenEastMesh, nullptr);
+
+        DirectionMeshes[Directions::ZNeg] = GenMeshCustom(&GenNorthMesh, nullptr);
+        DirectionMeshes[Directions::ZPos] = GenMeshCustom(&GenSouthMesh, nullptr);
+
+        DirectionMeshes[Directions::YPos] = GenMeshCustom(&GenCeilingMesh, nullptr);
+        DirectionMeshes[Directions::YNeg] = GenMeshCustom(&GenFloorMesh, nullptr);
+	}
+
 	DrawScale = scale;
 	MapPointer = map;
 
@@ -505,6 +510,8 @@ bool MapRenderer::PointInCell(Vector2& postion, float radius, RenderCell* cellPt
 	if (!cellPtr->MapCell->Solid)
 		return false;
 
+	radius *= DrawScale;
+
 	float minX = cellPtr->Bounds.x - radius;
 	float maxX = cellPtr->Bounds.x + cellPtr->Bounds.width + radius;
 	float minY = cellPtr->Bounds.y - radius;
@@ -563,6 +570,9 @@ bool MapRenderer::PointIsOpen(Vector3& postion, float radius)
 
 void MapRenderer::AddVisCell(RenderCell* cell)
 {
+	if (cell == nullptr)
+		return;
+
 	if (VisibleCells.find(cell->Index) == VisibleCells.end())
 		VisibleCells.emplace(cell->Index, cell);
 }
@@ -625,7 +635,7 @@ void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2 &origin)
         }
 		walkcell = GetCell(mapX, mapY);
 
-		if (!walkcell->MapCell->Solid)
+		if (walkcell != nullptr && !walkcell->MapCell->Solid)
 			AddVisCell(walkcell);
 
 		if (walkcell != nullptr)
@@ -701,42 +711,42 @@ void MapRenderer::ComputeVisibility(const Camera& camera, float fovX)
 	CastRays(mapCamera);
 }
 
-typedef struct  
+void MapRenderer::DrawFaces()
 {
-	RenderCell* Cell;
-	Directions Dir;
-}FaceDraw;
+	Vector3 pos{ 0, 0, 0 };
 
-std::map<uint16_t, FaceDraw> FacesToDraw;
+	for (auto &faceListItr : FacesToDraw)
+	{
+		for (auto& face : faceListItr.second)
+		{
+            RenderCell* cell = face.Cell;
 
-void DrawFaces()
-{
+            pos.x = cell->MapCell->Position.x * DrawScale;
+            pos.z = cell->MapCell->Position.y * DrawScale;
 
+			if (face.Dir == Directions::YPos)
+                pos.y = DrawScale;
+            else
+                pos.y = 0;
+
+            DrawModel(ModelCache[faceListItr.first], pos, DrawScale, DirectionColors[face.Dir]);
+		}
+    }
 }
 
 void MapRenderer::DrawCell(RenderCell* cell)
 {
-	Vector3 pos{ 0,0, 0 };
-
 	++DrawnCells;
-
-    pos.x = cell->MapCell->Position.x * DrawScale;
-    pos.z = cell->MapCell->Position.y * DrawScale;
-
     for (auto& face : cell->RenderFaces)
     {
-        if (face.first == Directions::YPos)
-            pos.y = DrawScale;
-        else
-            pos.y = 0;
-
 		++DrawnFaces;
-        DrawModel(ModelCache[face.second], pos, DrawScale, DirectionColors[face.first]);
+		FacesToDraw[face.second].push_back(FaceDraw{ cell, face.first });
     }
 }
 
 void MapRenderer::Draw()
 {
+	FacesToDraw.clear();
     DrawnCells = 0;
     DrawnFaces = 0;
 
@@ -750,11 +760,13 @@ void MapRenderer::Draw()
 		for (auto vis : VisibleCells)
             DrawCell(vis.second);
     }
+	
+	DrawFaces();
 }
 
 static bool DrawDebugRays = false;
 
-void MapRenderer::DrawMiniMap(int posX, int posY, int scale, Camera& camera, float fovX)
+void MapRenderer::DrawMiniMap(int posX, int posY, int scale, const Camera& camera, float fovX)
 {
 	int miniMapWidth = MapPointer->Width * scale;
 	int minMapHeight = MapPointer->Height * scale;
@@ -859,7 +871,7 @@ void MapRenderer::DrawMiniMap(int posX, int posY, int scale, Camera& camera, flo
 	}
 }
 
-void MapRenderer::DrawMiniMapZoomed(int posX, int posY, int scale, Camera& camera, float fovX)
+void MapRenderer::DrawMiniMapZoomed(int posX, int posY, int scale, const Camera& camera, float fovX)
 {
 	int miniMapWidth = 5 * scale;
 	int minMapHeight = 5 * scale;

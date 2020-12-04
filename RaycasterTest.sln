@@ -29,8 +29,8 @@ Global
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Debug|x64.Build.0 = Debug.DLL|x64
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release.DLL|x64.ActiveCfg = Release.DLL|x64
 		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release.DLL|x64.Build.0 = Release.DLL|x64
-		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x64.ActiveCfg = Release|x64
-		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x64.Build.0 = Release|x64
+		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x64.ActiveCfg = Release.DLL|x64
+		{E89D61AC-55DE-4482-AFD4-DF7242EBC859}.Release|x64.Build.0 = Release.DLL|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

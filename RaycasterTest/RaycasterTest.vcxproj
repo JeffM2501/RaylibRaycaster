@@ -90,8 +90,12 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.dll $(SolutionDir)\bin\$(Platform)\$(Configuration)\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FPCamera.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="RaycasterTest.h" />
@@ -100,6 +104,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FPCamera.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Map.cpp" />
     <ClCompile Include="RaycasterTest.cpp" />
