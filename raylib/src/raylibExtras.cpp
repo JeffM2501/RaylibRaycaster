@@ -101,7 +101,7 @@ void DrawVector3Text(Vector3* vector, int posX, int posY, bool rightJustify)
 	int offset = 0;
 	if (rightJustify)
 		offset = MeasureText(text, size);
-	DrawText(text, posX - offset, posY, 20, LIME);
+	DrawText(text, posX - offset, posY, size, LIME);
 }
 
 void DrawVector2Text(Vector2* vector, int posX, int posY, bool rightJustify)
@@ -112,7 +112,7 @@ void DrawVector2Text(Vector2* vector, int posX, int posY, bool rightJustify)
 	int offset = 0;
 	if (rightJustify)
 		offset = MeasureText(text, size);
-	DrawText(text, posX - offset, posY, 20, LIME);
+	DrawText(text, posX - offset, posY, size, LIME);
 }
 
 void DrawLine3DF(float spx, float spy, float spz, float epx, float epy, float epz, Color color)

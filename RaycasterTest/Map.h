@@ -61,7 +61,7 @@ class RayCast
 {
 public:
 	Vector2 Ray;
-	RenderCell* target;
+	RenderCell* Target = nullptr;
 
 	RayCast() {}
 	RayCast( Vector2 ray ) : Ray(ray){ }
@@ -74,7 +74,6 @@ class RaySet
 public:
 	RayCast::Ptr Positive;
 	RayCast::Ptr Negative;
-
 
 	inline void Bisect(RaySet& posSide, RaySet& negSide)
 	{
@@ -116,8 +115,14 @@ public:
 
 	bool PointIsOpen(Vector3& postion, float radius);
 
+	bool DrawEverything = false;
+
+	int DrawnCells = 0;
+	int DrawnFaces = 0;
+
 private:
 	float DrawScale = 1.0f;
+	float RayAngleLimit = 1.0;
 
 	std::map<Directions, Mesh> DirectionMeshes;
 	std::map<uint16_t, Model> ModelCache;
@@ -133,7 +138,18 @@ private:
 
 	void AddVisCell(RenderCell* cell);
 
-	std::deque< RaySet> PendingRayCasts;
+	void DrawCell(RenderCell* cell);
+
+	std::deque<RaySet> PendingRayCasts;
+	std::vector<RaySet> DrawnRays;
+
 	std::map<int,RenderCell*> VisibleCells;
+
+	class DrawFace
+	{
+	public:
+		Vector3 Postion;
+		Directions FaceDir;
+	};
 };
 

@@ -434,6 +434,13 @@ void MapRenderer::Setup(CastMap::Ptr map, float scale)
 	DrawScale = scale;
 	MapPointer = map;
 
+	float maxMapSize = Vector2Length(Vector2 { float(map->Width), float(map->Height)});
+
+	Vector2 v1 = { 1,0 };
+	Vector2 v2 = Vector2Normalize(Vector2{ maxMapSize, 0.025f });
+	
+	RayAngleLimit = Vector2DotProduct(v1, v2);
+
 	Vector3 sundir = Vector3Normalize(Vector3{ 1,-1, 0.5f });
 	float ambient = 0.25f;
 
@@ -562,53 +569,68 @@ void MapRenderer::AddVisCell(RenderCell* cell)
 
 void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2 &origin)
 {
-//	if (ray->target != nullptr)
+	if (ray->Target != nullptr)
 		return;
 
-	// walk the map, adding cells to the vis list if they are not in it
-	bool horizontal = fabs(ray->Ray.x) > fabs(ray->Ray.y);
+	int mapX = (int)std::floor(origin.x);
+	int mapY = (int)std::floor(origin.y);
 
-	float slope = 1;
-	if (horizontal)
-	{
-		if (ray->Ray.y == 0)
-			slope = 0;
-		else
-			slope = ray->Ray.x / ray->Ray.y;
-	}
-	else
-	{
-		if (ray->Ray.x == 0)
-			slope = 0;
-		else
-			slope = ray->Ray.y / ray->Ray.x;
-	}
+	double sideDistX = 0;
+	double sideDistY = 0;
 
-	Vector2 currentPos = origin;
+	double deltaDistX = std::abs(1.0 / ray->Ray.x);
+	double deltaDistY = std::abs(1.0 / ray->Ray.y);
 
-	RenderCell* walkcell = GetCell(currentPos.x, currentPos.y);
+	int stepX = 0;
+	int stepY = 0;
+	int hit = 0;
+
+    if (ray->Ray.x < 0)
+    {
+        stepX = -1;
+        sideDistX = (origin.x - mapX) * deltaDistX;
+    }
+    else
+    {
+        stepX = 1;
+        sideDistX = (mapX + 1.0 - origin.x) * deltaDistX;
+    }
+    if (ray->Ray.y < 0)
+    {
+        stepY = -1;
+        sideDistY = (origin.y - mapY) * deltaDistY;
+    }
+    else
+    {
+        stepY = 1;
+        sideDistY = (mapY + 1.0 - origin.y) * deltaDistY;
+    }
+
+	RenderCell* walkcell = GetCell(mapX, mapY);
 	AddVisCell(walkcell);
 
-	float count = 0;
-	while (walkcell != nullptr && !walkcell->MapCell->Solid)
-	{
-		// get a new walk cell
+    while (walkcell != nullptr && !walkcell->MapCell->Solid)
+    {
+        //jump to next map square, OR in x-direction, OR in y-direction
+        if (sideDistX < sideDistY)
+        {
+            sideDistX += deltaDistX;
+            mapX += stepX;
+        }
+        else
+        {
+            sideDistY += deltaDistY;
+            mapY += stepY;
 
-		count += 1.0f;
-		if (horizontal)
-		{
-		//	currentPos = Vector2Add(origin, Vector2(count,)
-		}
-		else
-		{
-
-		}
+        }
+		walkcell = GetCell(mapX, mapY);
 
 		if (!walkcell->MapCell->Solid)
 			AddVisCell(walkcell);
 
-		ray->target = walkcell;
-	}
+		if (walkcell != nullptr)
+			ray->Target = walkcell;
+    }
 }
 
 void MapRenderer::CastRays(Vector2& origin)
@@ -618,23 +640,31 @@ void MapRenderer::CastRays(Vector2& origin)
 		RaySet set = PendingRayCasts.front();
 		PendingRayCasts.pop_front();
 
+		DrawnRays.emplace_back(set);
+
 		//if our rays aren't cast then cast them and get our targets
-		if (set.Positive->target == nullptr)
+		if (set.Positive->Target == nullptr)
 			GetTarget(set.Positive, origin);
 
-		if (set.Negative->target == nullptr)
+		if (set.Negative->Target == nullptr)
 			GetTarget(set.Negative, origin);
 
 		// both are hitting the same target, we are done
-		if (set.Positive->target == set.Negative->target)
-			return;
+		if (set.Positive->Target != nullptr && set.Negative->Target != nullptr)
+		{
+			if (set.Positive->Target->Index != set.Negative->Target->Index) // split and continue
+			{
+				if (Vector2DotProduct(set.Positive->Ray, set.Negative->Ray) < RayAngleLimit)
+				{
+					RaySet posSet;
+					RaySet negSeg;
+					set.Bisect(posSet, negSeg);
 
-		RaySet posSet;
-		RaySet negSeg;
-		set.Bisect(posSet, negSeg);
-
-		PendingRayCasts.push_back(posSet);
-		PendingRayCasts.push_back(negSeg);
+					PendingRayCasts.push_back(posSet);
+					PendingRayCasts.push_back(negSeg);
+				}
+			}
+		}
 	}
 }
 
@@ -646,6 +676,17 @@ void MapRenderer::ComputeVisibility(const Camera& camera, float fovX)
 	Vector2 viewVector{ camera.target.x - camera.position.x,camera.target.z - camera.position.z };
 	viewVector = Vector2Normalize(viewVector);
 
+	// our cell and those around us are always visible
+	AddVisCell(GetCell(mapCamera.x, mapCamera.y));
+	AddVisCell(GetCell(mapCamera.x-1, mapCamera.y));
+	AddVisCell(GetCell(mapCamera.x+1, mapCamera.y));
+    AddVisCell(GetCell(mapCamera.x, mapCamera.y-1));
+    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y-1));
+    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y-1));
+    AddVisCell(GetCell(mapCamera.x, mapCamera.y+1));
+    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y+1));
+    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y+1));
+
 	Vector2 posFOV = Vector2Rotate(viewVector, fovX * 0.5f);
 	Vector2 negFov = Vector2Rotate(viewVector, -fovX * 0.5f);
 
@@ -654,41 +695,64 @@ void MapRenderer::ComputeVisibility(const Camera& camera, float fovX)
 	viewSet.Positive = std::make_shared<RayCast>(posFOV);
 	viewSet.Negative = std::make_shared<RayCast>(negFov);
 
+	DrawnRays.clear();
+	PendingRayCasts.clear();
 	PendingRayCasts.push_back(viewSet);
 	CastRays(mapCamera);
 }
 
+typedef struct  
+{
+	RenderCell* Cell;
+	Directions Dir;
+}FaceDraw;
+
+std::map<uint16_t, FaceDraw> FacesToDraw;
+
+void DrawFaces()
+{
+
+}
+
+void MapRenderer::DrawCell(RenderCell* cell)
+{
+	Vector3 pos{ 0,0, 0 };
+
+	++DrawnCells;
+
+    pos.x = cell->MapCell->Position.x * DrawScale;
+    pos.z = cell->MapCell->Position.y * DrawScale;
+
+    for (auto& face : cell->RenderFaces)
+    {
+        if (face.first == Directions::YPos)
+            pos.y = DrawScale;
+        else
+            pos.y = 0;
+
+		++DrawnFaces;
+        DrawModel(ModelCache[face.second], pos, DrawScale, DirectionColors[face.first]);
+    }
+}
+
 void MapRenderer::Draw()
 {
-	Vector3 pos{ 0,0, 0};
-	Vector3 YAxis{ 0,1,0 };
-	Vector3 XAxis{ 1,0,0 };
-	Vector3 scale{ DrawScale,DrawScale,DrawScale };
+    DrawnCells = 0;
+    DrawnFaces = 0;
 
- 	for (int y = 0; y < MapPointer->Height; y++)
- 	{
- 		for (int x = 0; x < MapPointer->Width; x++)
- 		{
- 			pos.x = x * DrawScale;
- 			pos.z = y * DrawScale;
- 
- 			RenderCellVecItr itr = RenderCells.begin() + (size_t(y) * MapPointer->Width) + x;
- 			for (auto& face : itr->RenderFaces)
- 			{
-				if (face.first == Directions::YPos)
-					pos.y = DrawScale;
-				else
-					pos.y = 0;
-
- 				DrawModel(ModelCache[face.second], pos, DrawScale, DirectionColors[face.first]);
- 			}
-
-			// debug bounds
-			if (itr->MapCell->Solid)
-				DrawRect3DXZ(itr->Bounds, 0.1f, itr->MapCell->Solid ? RED : LIME);
- 		}
- 	}
+	if (DrawEverything)
+	{
+		for (auto& cell : RenderCells)
+			DrawCell(&cell);
+	}
+	else
+	{
+		for (auto vis : VisibleCells)
+            DrawCell(vis.second);
+    }
 }
+
+static bool DrawDebugRays = false;
 
 void MapRenderer::DrawMiniMap(int posX, int posY, int scale, Camera& camera, float fovX)
 {
@@ -704,11 +768,25 @@ void MapRenderer::DrawMiniMap(int posX, int posY, int scale, Camera& camera, flo
 			int localX = x * scale + posX;
 			int localY = y * scale + posY;
 
-			DrawRectangle(localX + 1, localY + 1, scale - 1, scale - 1, MapPointer->GetCell(x, y)->CellTextures.empty() ? BLACK : DARKGRAY);
+			auto cell = MapPointer->GetCell(x, y);
+			DrawRectangle(localX + 1, localY + 1, scale - 1, scale - 1,cell->Solid ? BLACK : DARKGRAY);
 		}
 	}
-	int localX = (int)(camera.position.x * scale + posX);
-	int localY = (int)(camera.position.z * scale + posY);
+
+	for (auto vis : VisibleCells)
+	{
+		RenderCell* cell = vis.second;
+
+        int localX = (int)(cell->MapCell->Position.x * scale + posX);
+        int localY = (int)(cell->MapCell->Position.y * scale + posY);
+        DrawRectangle(localX + 1, localY + 1, scale - 1, scale - 1, LIGHTGRAY);
+	}
+
+	Vector2 cameraInMapSpace{ camera.position.x / DrawScale, camera.position.z / DrawScale };
+	auto currentCell = GetCell(cameraInMapSpace.x, cameraInMapSpace.y);
+
+	int localX = (int)(cameraInMapSpace.x * scale + posX);
+	int localY = (int)(cameraInMapSpace.y * scale + posY);
 	DrawCircle(localX, localY, scale / 3.0f, GREEN);
 
 	Vector2 targetVec{camera.target.x - camera.position.x,camera.target.z - camera.position.z };
@@ -728,6 +806,57 @@ void MapRenderer::DrawMiniMap(int posX, int posY, int scale, Camera& camera, flo
 	targetX = localX + (int)(posFOV.x * scale * 10);
 	targetY = localY + (int)(posFOV.y * scale * 10);
 	DrawLine(localX, localY, targetX, targetY, GREEN);
+
+	if (DrawDebugRays)
+	{
+		for (auto& ray : DrawnRays)
+		{
+			RenderCell* cell = ray.Positive->Target;
+
+			if (cell != nullptr)
+			{
+				int localX = (int)(cell->MapCell->Position.x * scale + posX);
+				int localY = (int)(cell->MapCell->Position.y * scale + posY);
+				DrawRectangle(localX + 1, localY + 1, scale - 1, scale - 1, MAROON);
+			}
+
+			cell = ray.Negative->Target;
+
+			if (cell != nullptr)
+			{
+				int localX = (int)(cell->MapCell->Position.x * scale + posX);
+				int localY = (int)(cell->MapCell->Position.y * scale + posY);
+				DrawRectangle(localX + 1, localY + 1, scale - 1, scale - 1, GOLD);
+			}
+		}
+
+		for (auto& ray : DrawnRays)
+		{
+			RenderCell* cell = ray.Positive->Target;
+
+			if (cell != nullptr)
+			{
+				float len = Vector2Length(Vector2Subtract(cell->MapCell->Position, currentCell->MapCell->Position));
+
+				int targetX = localX + (int)(ray.Positive->Ray.x * scale * len);
+				int targetY = localY + (int)(ray.Positive->Ray.y * scale * len);
+
+				DrawLine(localX, localY, targetX, targetY, RED);
+			}
+
+			cell = ray.Negative->Target;
+
+			if (cell != nullptr)
+			{
+				float len = Vector2Length(Vector2Subtract(cell->MapCell->Position, currentCell->MapCell->Position));
+
+				int targetX = localX + (int)(ray.Negative->Ray.x * scale * len);
+				int targetY = localY + (int)(ray.Negative->Ray.y * scale * len);
+
+				DrawLine(localX, localY, targetX, targetY, ORANGE);
+			}
+		}
+	}
 }
 
 void MapRenderer::DrawMiniMapZoomed(int posX, int posY, int scale, Camera& camera, float fovX)
