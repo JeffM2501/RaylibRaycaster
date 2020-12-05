@@ -15,11 +15,11 @@ public:
 
     void Update();
 
-    float GetFOVX();
-    Vector2 GetMapPosition();
-    Vector3 GetCameraPosition();
+    float GetFOVX() const;
+    Vector2 GetMapPosition() const;
+    Vector3 GetCameraPosition() const;
 
-    inline Vector2 GetViewAngles() { return Vector2Scale(Angle, 1.0f / DEG2RAD); }
+    inline Vector2 GetViewAngles() const { return Vector2Scale(Angle, 1.0f / DEG2RAD); }
 
    typedef enum
     {
@@ -55,7 +55,7 @@ public:
     PostionCallback ValidateCamPostion = nullptr;
     PostionCallback ValidateMapPostion = nullptr;
 
-    inline const Camera& GetCamera() { return ViewCamera; }
+    inline const Camera& GetCamera() const { return ViewCamera; }
 
     bool UseMouseX = true;
     bool UseMouseY = true;

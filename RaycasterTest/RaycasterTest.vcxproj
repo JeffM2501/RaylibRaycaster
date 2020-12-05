@@ -95,9 +95,12 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FaceGeometry.h" />
     <ClInclude Include="FPCamera.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="HudWidgets.h" />
     <ClInclude Include="Map.h" />
+    <ClInclude Include="MapRenderer.h" />
     <ClInclude Include="RaycasterTest.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceManager.h" />
@@ -105,8 +108,10 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FPCamera.cpp" />
+    <ClCompile Include="HudWidgets.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Map.cpp" />
+    <ClCompile Include="MapRenderer.cpp" />
     <ClCompile Include="RaycasterTest.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
   </ItemGroup>

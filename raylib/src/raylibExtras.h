@@ -28,6 +28,7 @@
 #define RAYLIB_EXTRAS_H
 
 #include "raylib.h"															// Required for structs: Vector3, Matrix
+#include <math.h>
 
 #if defined(__cplusplus)
 extern "C" {            // Prevents name mangling of functions
@@ -58,6 +59,21 @@ typedef struct Vector2i
     int x;
     int y;
  } Vector2i;
+
+// Subtract two vectors (v1 - v2)
+inline RLAPI Vector2i Vector2ISubtract(Vector2i v1, Vector2i v2)
+{
+    Vector2i result = { v1.x - v2.x, v1.y - v2.y };
+    return result;
+}
+
+// Calculate vector length
+inline RLAPI float Vector2ILength(Vector2i v)
+{
+    float result = sqrtf((float)((v.x * v.x) + (v.y * v.y)));
+    return result;
+}
+
 
 #if defined(__cplusplus)
 }

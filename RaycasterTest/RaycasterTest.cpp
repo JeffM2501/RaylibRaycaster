@@ -7,6 +7,8 @@
 #include "raymath.h"
 #include "ResourceManager.h"
 #include "Map.h"
+#include "MapRenderer.h"
+#include "HudWidgets.h"
 
 #include <string>
 
@@ -35,7 +37,7 @@ protected:
 
     bool CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion);
 
-    CastMap::Ptr Map;
+    GridMap::Ptr Map;
     MapRenderer Renderer;
     FPCamera ViewCamera;
 
@@ -86,9 +88,8 @@ float ComputeFOV(Camera& camera)
 
 void Application::Setup()
 {
-    Color textColor(LIGHTGRAY);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);  // Enable Multi Sampling Anti Aliasing 4x (if available)
     InitWindow(WindowSize.x, WindowSize.y, "Raylib Raycaster test");
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     ResourceManager::Setup("assets/");
     const Image& mapImage = ResourceManager::GetImage("cubicmap.png");
@@ -106,7 +107,7 @@ void Application::Setup()
     
     SetTargetFPS(120);
 
-    Map = std::make_shared<CastMap>();
+    Map = std::make_shared<GridMap>();
 
     size_t floorID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile098.png"));
     size_t ceilingID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile128.png"));
@@ -125,7 +126,7 @@ void Application::Setup()
 
 bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
 {
-    if (!Renderer.PointIsOpen(newPostion, 0.1f))
+    if (Renderer.CollideWithMap(newPostion, 0.1f))
     {
         newPostion = oldPostion;
         return false;
@@ -195,11 +196,11 @@ void Application::DrawHUD()
 
     DrawVector2Text(&ViewCamera.GetViewAngles(), WindowSize.x - 10, WindowSize.y - 50, true);
 
-    const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells/(double)Renderer.MapPointer->Cells.size()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
+    const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells/(double)Renderer.MapPointer->GetCellCount()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
     DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
 
-    Renderer.DrawMiniMap(0, 0, 8, ViewCamera.GetCamera(), ViewCamera.GetFOVX());
-    Renderer.DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, ViewCamera.GetCamera(), ViewCamera.GetFOVX());
+    DrawMiniMap(0, 0, 8, Renderer,ViewCamera);
+    DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, ViewCamera);
 }
 
 void Application::Cleanup()

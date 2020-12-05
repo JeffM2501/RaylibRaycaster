@@ -171,17 +171,17 @@ void FPCamera::Update()
     ViewCamera.target.z = ViewCamera.position.z - transform.m14;
 }
 
-float FPCamera::GetFOVX()
+float FPCamera::GetFOVX() const
 {
     return FOV.x;
 }
 
-Vector2 FPCamera::GetMapPosition()
+Vector2 FPCamera::GetMapPosition() const
 {
     return Vector2{ std::floor(CameraPosition.x / ViewScale), std::floor(CameraPosition.z / ViewScale) };
 }
 
-Vector3 FPCamera::GetCameraPosition()
+Vector3 FPCamera::GetCameraPosition() const
 {
     return CameraPosition;
 }
