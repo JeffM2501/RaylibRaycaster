@@ -1471,7 +1471,62 @@ int GetMonitorHeight(int monitor)
     return 0;
 }
 
-// Get primary montior physical width in millimetres
+// Get selected monitor x position
+int GetMonitorPositionX(int monitor)
+{
+#if defined(PLATFORM_DESKTOP)
+    int monitorCount;
+    int x, y;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+    if ((monitor >= 0) && (monitor < monitorCount))
+    {
+        glfwGetMonitorPos(monitors[monitor], &x, &y);
+        return x;
+    }
+    else TRACELOG(LOG_WARNING, "GLFW: Failed to find selected monitor");
+#endif
+    return 0;
+}
+
+// Get selected monitor y position
+int GetMonitorPositionY(int monitor)
+{
+#if defined(PLATFORM_DESKTOP)
+    int monitorCount;
+    int x, y;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+    if ((monitor >= 0) && (monitor < monitorCount))
+    {
+        glfwGetMonitorPos(monitors[monitor], &x, &y);
+        return y;
+    }
+    else TRACELOG(LOG_WARNING, "GLFW: Failed to find selected monitor");
+#endif
+    return 0;
+}
+
+int GetPrimaryMonitor()
+{
+#if defined(PLATFORM_DESKTOP)
+    int monitorCount;
+    glfwGetMonitors(&monitorCount);
+
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+    for (int i = 0; i < monitorCount; i++)
+    {
+        if (monitors[i] == primary)
+            return i;
+    }
+    TRACELOG(LOG_WARNING, "GLFW: Failed to find selected monitor");
+#endif
+    return 0;
+}
+
+// Get primary monitor physical width in millimetres
 int GetMonitorPhysicalWidth(int monitor)
 {
 #if defined(PLATFORM_DESKTOP)
