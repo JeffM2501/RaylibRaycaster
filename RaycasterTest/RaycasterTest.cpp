@@ -97,23 +97,16 @@ void Application::Setup()
     float scale = 1;
 
     ViewCamera.ValidateMapPostion = std::bind(&Application::CheckMapPos, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-
     ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 0, scale * 2 });
-
     ViewCamera.MoveSpeed.z = 4; // units per second
     ViewCamera.MoveSpeed.x = 2;
-
     ViewCamera.ViewBobbleFreq = 20;
     
     SetTargetFPS(120);
 
     Map = std::make_shared<GridMap>();
 
-    size_t floorID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile098.png"));
-    size_t ceilingID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile128.png"));
-    size_t wallID = Renderer.SetupTexture(ResourceManager::GetAssetID("textures/wall/tile065.png"));
-
-    Map->LoadFromImage(mapImage, scale, wallID, floorID, ceilingID);
+    Map->LoadFromFile(ResourceManager::GetAssetPath("raylib.gridmap"));
 
     Renderer.Setup(Map, scale);
     //--------------------------------------------------------------------------------------

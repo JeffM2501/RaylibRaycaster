@@ -115,6 +115,8 @@ private:
 
     std::map<int, RenderCell*> VisibleCells;
 
+    std::map<size_t, size_t> MaterialIndexMap;
+
     class FaceDraw
     {
     public:

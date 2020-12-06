@@ -9,6 +9,7 @@ namespace ResourceManager
     void Cleanup();
 
     size_t GetAssetID(const std::string& path);
+    std::string GetAssetPath(const std::string& path);
 
     const Texture2D& GetTexture(const std::string& path);
     const Texture2D& GetTexture(size_t id);

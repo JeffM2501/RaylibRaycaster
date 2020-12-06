@@ -83,6 +83,13 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
         DirectionMeshes[Directions::YNeg] = GenMeshCustom(&GenFloorMesh, nullptr);
     }
 
+    MaterialIndexMap.clear();
+    for (auto& mat : map->MaterialList)
+    {
+        size_t materialID = SetupTexture(ResourceManager::GetAssetID(mat.second));
+        MaterialIndexMap[mat.first] = materialID;
+    }
+
     DrawScale = scale;
     MapPointer = map;
 
@@ -125,12 +132,12 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
             for (auto& cellFace : cell->CellTextures)
             {
                 Directions dir = cellFace.first;
-                size_t texture = cellFace.second;
+                size_t materialID = MaterialIndexMap[cellFace.second];
 
                 if (caches.find(dir) == caches.end())
                     caches[dir] = std::map<size_t, uint16_t>();
 
-                renderCell->RenderFaces[dir] = GetModelFromCache(texture, caches[dir], DirectionMeshes[dir]);
+                renderCell->RenderFaces[dir] = GetModelFromCache(materialID, caches[dir], DirectionMeshes[dir]);
             }
         });
 }

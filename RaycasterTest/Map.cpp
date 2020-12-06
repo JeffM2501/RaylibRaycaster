@@ -2,6 +2,8 @@
 #include "ResourceManager.h"
 #include "raymath.h"
 
+#include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <cmath>
 
@@ -9,9 +11,9 @@ GridMap::~GridMap()
 {
 }
 
-bool GridMap::IsSolid(int x, int y, Color* imageData)
+bool PixelIsSolid(int x, int y, Color* imageData, int width)
 {
-	return (imageData + (y * Size.x + x))->b > 0;
+	return (imageData + (y * width + x))->b > 0;
 }
 
 void GridMap::LoadFromImage(const Image& image, float scale, size_t walls, size_t floor, size_t ceiling)
@@ -31,19 +33,19 @@ void GridMap::LoadFromImage(const Image& image, float scale, size_t walls, size_
 			std::vector<GridCell>::iterator cell = Cells.begin() + (size_t(y) * Size.x + x);
 			cell->Position.x = x;
 			cell->Position.y = y;
-			cell->Solid = IsSolid(x, y, imageData);
+			cell->Solid = PixelIsSolid(x, y, imageData, Size.x);
 			if (!cell->Solid)
 			{
-				if (x != 0 && IsSolid(x - 1, y, imageData))			// west side is closed, add a wall
+				if (x != 0 && PixelIsSolid(x - 1, y, imageData, Size.x))			// west side is closed, add a wall
 					cell->CellTextures[Directions::XNeg] = walls;
  
- 				if (x != Size.x -1 && IsSolid(x + 1, y, imageData))	// east side is closed, add a wall
+ 				if (x != Size.x -1 && PixelIsSolid(x + 1, y, imageData, Size.x))	// east side is closed, add a wall
  					cell->CellTextures[Directions::XPos] = walls;
 
-				if (y != 0 && IsSolid(x, y - 1, imageData))			// north side is closed, add a wall
+				if (y != 0 && PixelIsSolid(x, y - 1, imageData, Size.x))			// north side is closed, add a wall
 					cell->CellTextures[Directions::ZNeg] = walls;
 
-				if (y != Size.y - 1 && IsSolid(x, y+1, imageData))	// east side is closed, add a wall
+				if (y != Size.y - 1 && PixelIsSolid(x, y+1, imageData, Size.x))	// east side is closed, add a wall
 					cell->CellTextures[Directions::ZPos] = walls;
 
 				cell->CellTextures[Directions::YNeg] = floor;
@@ -52,6 +54,165 @@ void GridMap::LoadFromImage(const Image& image, float scale, size_t walls, size_
 		}
 	}
 	FreeData(imageData);
+}
+
+size_t GridMap::AddMaterial(const std::string& path)
+{
+	size_t maxId = 0;
+	for (auto& mat : MaterialList)
+	{
+		if (mat.second == path)
+			return mat.first;
+
+		if (mat.first > maxId)
+			maxId = mat.first;
+	}
+
+	++maxId;
+	MaterialList[maxId] = path;
+	return maxId;
+}
+
+constexpr int MapFileMagic = 0x0F0F0F0F;
+
+bool GridMap::LoadFromFile(const std::string& path)
+{
+	MaterialList.clear();
+	Cells.clear();
+	Size.x = 0;
+	Size.y = 0;
+
+	FILE* fp = nullptr;
+
+	bool valid = false;
+
+	try
+	{
+		fopen_s(&fp, path.c_str(), "rb");
+		if (fp == nullptr)
+			throw;
+
+		int magic = 0;
+		fread(&magic, sizeof(int), 1, fp);
+
+		if (magic == MapFileMagic)
+		{
+			fread(&Size, sizeof(int), 2, fp);
+
+			int matCount = 0;
+			fread(&matCount, sizeof(int), 1, fp);
+
+			for (int i = 0; i < matCount; ++i)
+			{
+				int id = 0;
+				fread(&id, sizeof(int), 1, fp);
+
+				int size = 0;
+				fread(&size, sizeof(int), 1, fp);
+				char* name = new char[(size_t)size+1];
+				fread(name, size, 1, fp);
+				name[size] = '\0';
+				MaterialList[id] = name;
+
+				delete[](name);
+			}
+
+			int cellCount = Size.x * Size.y;
+			Cells.resize(cellCount);
+			for (int i = 0; i < cellCount; ++i)
+			{
+				GridCell &cell = Cells[i];
+				cell.Position.y = i / Size.x;
+				cell.Position.x = i - (cell.Position.y * Size.x);
+
+				uint8_t solid = 0;
+				fread(&solid, sizeof(uint8_t), 1, fp);
+
+				if (solid != 0)
+					cell.Solid = true;
+
+				int size = 0;
+				fread(&size, sizeof(int), 1, fp);
+				for (int f = 0; f < size; ++f)
+				{
+					uint8_t dir = 0;
+					fread(&dir, sizeof(uint8_t), 1, fp);
+
+					int matId = 0;
+					fread(&matId, sizeof(int), 1, fp);
+
+					cell.CellTextures.emplace((Directions)dir, matId);
+				}
+			}
+
+			valid = true;
+		}
+	}
+	catch (...)
+	{
+			
+	}
+	if (fp != nullptr)
+		fclose(fp);
+
+	return valid;
+}
+
+
+void GridMap::SaveToFile(const std::string& path)
+{
+	FILE* fp = nullptr;
+	try
+	{
+		fopen_s(&fp, path.c_str(), "w+b");
+		if (fp == nullptr)
+			throw;
+
+		// header
+		fwrite(&MapFileMagic, sizeof(int), 1, fp);
+
+		// map sizes
+		fwrite(&Size, sizeof(int), 2, fp);
+
+		// material indexes
+		int size = (int)MaterialList.size();
+		fwrite(&size, sizeof(int), 1, fp);
+		for (auto& mat : MaterialList)
+		{
+			size = (int)mat.first;
+			fwrite(&size, sizeof(int), 1, fp);
+
+			size = (int)mat.second.size();
+			fwrite(&size, sizeof(int), 1, fp);
+
+			fwrite(mat.second.c_str(), size, 1, fp);
+		}
+
+		for (auto& cell : Cells)
+		{
+			uint8_t solid = 0;
+			if (cell.Solid)
+				solid = 1;
+			fwrite(&solid, sizeof(uint8_t), 1, fp);
+
+			size = (int)cell.CellTextures.size();
+			fwrite(&size, sizeof(int), 1, fp);
+			for (auto face : cell.CellTextures)
+			{
+				uint8_t d = (uint8_t)face.first;
+				fwrite(&d, sizeof(uint8_t), 1, fp);
+
+				size = (int)face.second;
+				fwrite(&size, sizeof(int), 1, fp);
+			}
+		}
+	}
+	catch (...)
+	{
+		
+	}
+	if (fp != nullptr)
+		fclose(fp);
 }
 
 const GridCell* GridMap::GetCell(int x, int y) const

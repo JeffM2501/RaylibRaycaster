@@ -63,6 +63,11 @@ namespace ResourceManager
         return h;
     }
 
+    std::string GetAssetPath(const std::string& path)
+    {
+        return GetOSPath(path);
+    }
+
     const Texture2D& GetTexture(const std::string& path)
     {
         return GetTexture(GetAssetID(path));
