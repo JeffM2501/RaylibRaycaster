@@ -24,8 +24,10 @@ class GridCell
 {
 public:
 	std::map<Directions, size_t>  CellTextures;
+	uint8_t Floor = 128;
+	uint8_t Ceiling = 16;
 	Vector2i Position = { 0,0 };
-	bool Solid = false;
+	inline bool IsSolid(){ return Floor == 255; }
 };
 
 class GridMap 
@@ -49,6 +51,7 @@ public:
 	std::map<size_t, std::string> MaterialList;
 
 	typedef std::shared_ptr<GridMap> Ptr;
+
 private:
 	Vector2i Size = { 0, 0 };
     std::vector<GridCell> Cells;

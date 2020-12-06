@@ -3767,8 +3767,8 @@ static int get_exts(void) {
 
         num_exts_i = 0;
         glGetIntegerv(GL_NUM_EXTENSIONS, &num_exts_i);
-        if (num_exts_i > 0) {
-            exts_i = (const char **)GLAD_REALLOC((void *)exts_i, num_exts_i * sizeof *exts_i);
+		if (num_exts_i > 0) {
+			exts_i = (const char **)GLAD_REALLOC((void *)exts_i, num_exts_i * sizeof *exts_i);
         }
 
         if (exts_i == NULL) {

@@ -2,7 +2,7 @@
 #include "FPCamera.h"
 #include "raymath.h"
 
-FPCamera::FPCamera() : ControlsKeys{ 'W', 'S', 'D', 'A', 'E', 'Q', -1, -1, -1, -1, KEY_LEFT_SHIFT }
+FPCamera::FPCamera() : ControlsKeys{ 'W', 'S', 'D', 'A', 'E', 'Q', KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_LEFT_SHIFT }
 {
 
 }
@@ -18,7 +18,7 @@ void FPCamera::Setup(float scale, float fovY, Vector3&& position)
     ViewCamera.type = CAMERA_PERSPECTIVE;
 
     Focused = IsWindowFocused();
-    if (Focused)
+    if (Focused && (UseMouseX || UseMouseY))
         DisableCursor();
 
     TargetDistance = 1;
@@ -56,7 +56,7 @@ float FPCamera::GetSpeedForAxis(CameraControls axis, float speed)
 
 void FPCamera::Update()
 {
-    if (IsWindowFocused() != Focused)
+    if (IsWindowFocused() != Focused && (UseMouseX || UseMouseY))
     {
         Focused = IsWindowFocused();
         if (Focused)

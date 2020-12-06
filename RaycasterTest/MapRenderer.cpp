@@ -180,7 +180,7 @@ bool MapRenderer::PointInCell(Vector2& postion, float radius, RenderCell* cellPt
 
     cellPtr->checkedForHit = true;
 
-    if (!cellPtr->MapCell->Solid)
+    if (!cellPtr->MapCell->IsSolid())
         return false;
 
     radius *= DrawScale;
@@ -292,7 +292,7 @@ void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
     RenderCell* walkcell = GetCell(mapX, mapY);
     AddVisCell(walkcell);
 
-    while (walkcell != nullptr && !walkcell->MapCell->Solid)
+    while (walkcell != nullptr && !walkcell->MapCell->IsSolid())
     {
         //jump to next map square, OR in x-direction, OR in y-direction
         if (sideDistX < sideDistY)
@@ -308,7 +308,7 @@ void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
         }
         walkcell = GetCell(mapX, mapY);
 
-        if (walkcell != nullptr && !walkcell->MapCell->Solid)
+        if (walkcell != nullptr && !walkcell->MapCell->IsSolid())
             AddVisCell(walkcell);
 
         if (walkcell != nullptr)

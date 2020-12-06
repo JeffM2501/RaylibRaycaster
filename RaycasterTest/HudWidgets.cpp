@@ -15,7 +15,7 @@ void DrawMiniMap(int posX, int posY, int gridSize, MapRenderer& renderer, const 
             int localX = cell->MapCell->Position.x * gridSize + posX;
             int localY = cell->MapCell->Position.y * gridSize + posY;
 
-            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->Solid ? BLACK : DARKGRAY);
+            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? BLACK : DARKGRAY);
         });
 
     renderer.DoForEachCell([posX, posY, gridSize](RenderCell* cell)
@@ -141,7 +141,7 @@ void DrawMiniMapZoomed(int posX, int posY, int gridSize, MapRenderer& renderer, 
 
             Color color = cellPtr->checkedForHit ? checkedColor : transColor;
 
-            if (cellPtr->MapCell->Solid)
+            if (cellPtr->MapCell->IsSolid())
             {
                 if (cellPtr->hitCell)
                     color = RED;

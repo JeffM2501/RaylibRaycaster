@@ -178,7 +178,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP</PreprocessorDefinitions>
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\external\glfw\include</AdditionalIncludeDirectories>
     </ClCompile>
@@ -214,7 +214,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP;BUILD_LIBTYPE_SHARED</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP;BUILD_LIBTYPE_SHARED</PreprocessorDefinitions>
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\external\glfw\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -253,7 +253,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\external\glfw\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
@@ -291,7 +291,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP;BUILD_LIBTYPE_SHARED</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);GRAPHICS_API_OPENGL_33;PLATFORM_DESKTOP;BUILD_LIBTYPE_SHARED</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\external\glfw\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -310,6 +310,7 @@
     <ClCompile Include="..\..\..\src\raudio.c" />
     <ClCompile Include="..\..\..\src\core.c" />
     <ClCompile Include="..\..\..\src\models.c" />
+    <ClCompile Include="..\..\..\src\raygui.c" />
     <ClCompile Include="..\..\..\src\raylibExtras.c" />
     <ClCompile Include="..\..\..\src\rglfw.c" />
     <ClCompile Include="..\..\..\src\shapes.c" />
@@ -330,9 +331,12 @@
     <ClInclude Include="..\..\..\src\external\stb_truetype.h" />
     <ClInclude Include="..\..\..\src\external\stb_vorbis.h" />
     <ClInclude Include="..\..\..\src\gestures.h" />
+    <ClInclude Include="..\..\..\src\gui_textbox_extended.h" />
+    <ClInclude Include="..\..\..\src\raygui.h" />
     <ClInclude Include="..\..\..\src\raylib.h" />
     <ClInclude Include="..\..\..\src\raylibExtras.h" />
     <ClInclude Include="..\..\..\src\raymath.h" />
+    <ClInclude Include="..\..\..\src\ricons.h" />
     <ClInclude Include="..\..\..\src\rlgl.h" />
     <ClInclude Include="..\..\..\src\utils.h" />
     <ClInclude Include="resource.h" />

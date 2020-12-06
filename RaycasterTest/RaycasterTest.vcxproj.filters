@@ -36,13 +36,16 @@
     <ClInclude Include="FPCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MapRenderer.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
     <ClInclude Include="FaceGeometry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HudWidgets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MapRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorGui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -59,13 +62,16 @@
     <ClCompile Include="Map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FPCamera.cpp">
-      <Filter>Resource Files</Filter>
-    </ClCompile>
     <ClCompile Include="MapRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HudWidgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FPCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -14,7 +14,7 @@
 
 #include "raylib.h"
 #include "FPCamera.h"
-
+#include "EditorGui.h"
 
 class Application
 {
@@ -44,6 +44,8 @@ protected:
     Texture BackgroundImage;
 
     Vector2i WindowSize = { 1280,720 };
+
+    std::shared_ptr<EditorGui> Editor;
 };
 
 void Run()
@@ -96,18 +98,18 @@ void Application::Setup()
 
     float scale = 1;
 
+    ViewCamera.UseMouseX = ViewCamera.UseMouseY = false;
     ViewCamera.ValidateMapPostion = std::bind(&Application::CheckMapPos, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
     ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 0, scale * 2 });
     ViewCamera.MoveSpeed.z = 4; // units per second
     ViewCamera.MoveSpeed.x = 2;
     ViewCamera.ViewBobbleFreq = 20;
-    
+
     SetTargetFPS(120);
 
     Map = std::make_shared<GridMap>();
 
     Map->LoadFromFile(ResourceManager::GetAssetPath("raylib.gridmap"));
-
     Renderer.Setup(Map, scale);
     //--------------------------------------------------------------------------------------
 
@@ -115,6 +117,8 @@ void Application::Setup()
     WindowSize.y = GetScreenHeight();
 
     BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
+
+    Editor = std::make_shared<EditorGui>(Renderer, ViewCamera);
 }
 
 bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
@@ -160,6 +164,7 @@ void Application::UpdateInput()
     if (IsKeyPressed(KEY_F10))
         Renderer.DrawEverything = !Renderer.DrawEverything;
 
+    ViewCamera.UseMouseX = ViewCamera.UseMouseY = IsMouseButtonDown(1);
     ViewCamera.Update();
 }
 
@@ -182,18 +187,21 @@ void Application::Draw3D()
 void Application::DrawHUD()
 {
     DrawFPS(10, WindowSize.y - 30);
+// 
+//     Vector3 pos = ViewCamera.GetCameraPosition();
+// 
+//     DrawVector3Text(&pos, WindowSize.x - 10, WindowSize.y - 30, true);
+// 
+//     DrawVector2Text(&ViewCamera.GetViewAngles(), WindowSize.x - 10, WindowSize.y - 50, true);
+// 
+//     const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells/(double)Renderer.MapPointer->GetCellCount()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
+//     DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
+// 
+//     DrawMiniMap(0, 0, 8, Renderer,ViewCamera);
+//    DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, ViewCamera);
 
-    Vector3 pos = ViewCamera.GetCameraPosition();
-
-    DrawVector3Text(&pos, WindowSize.x - 10, WindowSize.y - 30, true);
-
-    DrawVector2Text(&ViewCamera.GetViewAngles(), WindowSize.x - 10, WindowSize.y - 50, true);
-
-    const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells/(double)Renderer.MapPointer->GetCellCount()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
-    DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
-
-    DrawMiniMap(0, 0, 8, Renderer,ViewCamera);
-    DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, ViewCamera);
+    if (Editor != nullptr)
+        Editor->Draw();
 }
 
 void Application::Cleanup()

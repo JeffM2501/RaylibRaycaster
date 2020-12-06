@@ -2405,7 +2405,8 @@ char **GetDirectoryFiles(const char *dirPath, int *fileCount)
 
         while ((entity = readdir(dir)) != NULL)
         {
-            strcpy(dirFilesPath[counter], entity->d_name);
+            if (dirFilesPath[counter] != NULL)
+                strcpy(dirFilesPath[counter], entity->d_name);
             counter++;
         }
 
@@ -2645,7 +2646,8 @@ void OpenURL(const char *url)
 #if defined(PLATFORM_DESKTOP)
         char *cmd = (char *)RL_CALLOC(strlen(url) + 10, sizeof(char));
     #if defined(_WIN32)
-        sprintf(cmd, "explorer %s", url);
+        if (cmd != NULL)
+            sprintf(cmd, "explorer %s", url);
     #elif defined(__linux__)
         sprintf(cmd, "xdg-open '%s'", url); // Alternatives: firefox, x-www-browser
     #elif defined(__APPLE__)

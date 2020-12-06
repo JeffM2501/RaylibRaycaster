@@ -33,8 +33,8 @@ void GridMap::LoadFromImage(const Image& image, float scale, size_t walls, size_
 			std::vector<GridCell>::iterator cell = Cells.begin() + (size_t(y) * Size.x + x);
 			cell->Position.x = x;
 			cell->Position.y = y;
-			cell->Solid = PixelIsSolid(x, y, imageData, Size.x);
-			if (!cell->Solid)
+			cell->Floor = PixelIsSolid(x, y, imageData, Size.x) ? 255 : 128;
+			if (!cell->IsSolid())
 			{
 				if (x != 0 && PixelIsSolid(x - 1, y, imageData, Size.x))			// west side is closed, add a wall
 					cell->CellTextures[Directions::XNeg] = walls;
@@ -74,6 +74,7 @@ size_t GridMap::AddMaterial(const std::string& path)
 }
 
 constexpr int MapFileMagic = 0x0F0F0F0F;
+constexpr int MapFileVersion = 1;
 
 bool GridMap::LoadFromFile(const std::string& path)
 {
@@ -95,7 +96,10 @@ bool GridMap::LoadFromFile(const std::string& path)
 		int magic = 0;
 		fread(&magic, sizeof(int), 1, fp);
 
-		if (magic == MapFileMagic)
+		int version = 0;
+		fread(&version, sizeof(int), 1, fp);
+
+		if (magic == MapFileMagic && version == MapFileVersion)
 		{
 			fread(&Size, sizeof(int), 2, fp);
 
@@ -124,12 +128,9 @@ bool GridMap::LoadFromFile(const std::string& path)
 				GridCell &cell = Cells[i];
 				cell.Position.y = i / Size.x;
 				cell.Position.x = i - (cell.Position.y * Size.x);
-
-				uint8_t solid = 0;
-				fread(&solid, sizeof(uint8_t), 1, fp);
-
-				if (solid != 0)
-					cell.Solid = true;
+				
+				fread(&cell.Floor, sizeof(uint8_t), 1, fp);
+				fread(&cell.Ceiling, sizeof(uint8_t), 1, fp);
 
 				int size = 0;
 				fread(&size, sizeof(int), 1, fp);
@@ -170,6 +171,7 @@ void GridMap::SaveToFile(const std::string& path)
 
 		// header
 		fwrite(&MapFileMagic, sizeof(int), 1, fp);
+		fwrite(&MapFileVersion, sizeof(int), 1, fp);
 
 		// map sizes
 		fwrite(&Size, sizeof(int), 2, fp);
@@ -190,10 +192,8 @@ void GridMap::SaveToFile(const std::string& path)
 
 		for (auto& cell : Cells)
 		{
-			uint8_t solid = 0;
-			if (cell.Solid)
-				solid = 1;
-			fwrite(&solid, sizeof(uint8_t), 1, fp);
+			fwrite(&cell.Floor, sizeof(uint8_t), 1, fp);
+			fwrite(&cell.Ceiling, sizeof(uint8_t), 1, fp);
 
 			size = (int)cell.CellTextures.size();
 			fwrite(&size, sizeof(int), 1, fp);

@@ -55,7 +55,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;USE_LIBTYPE_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;USE_LIBTYPE_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -78,7 +78,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;USE_LIBTYPE_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;USE_LIBTYPE_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)raylib\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -95,6 +95,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="EditorGui.h" />
     <ClInclude Include="FaceGeometry.h" />
     <ClInclude Include="FPCamera.h" />
     <ClInclude Include="framework.h" />
@@ -107,6 +108,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EditorGui.cpp" />
     <ClCompile Include="FPCamera.cpp" />
     <ClCompile Include="HudWidgets.cpp" />
     <ClCompile Include="Main.cpp" />
