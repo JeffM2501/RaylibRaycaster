@@ -25,7 +25,7 @@ void MapRenderer::CleanUp()
 {
     RenderCells.clear();
     for (auto& cacheItr : ModelCache)
-        UnloadModelNoMesh(cacheItr.second);
+        UnloadModelKeepMeshes(cacheItr.second);
 
     for (auto& meshItr : DirectionMeshes)
         UnloadMesh(meshItr.second);

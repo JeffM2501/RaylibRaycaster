@@ -36,8 +36,6 @@ extern "C" {            // Prevents name mangling of functions
 
 RLAPI void FreeData(void* data);                                            // deallocates memory allocated by raylib
 
-RLAPI void UnloadModelNoMesh(Model model);                                  // Unload model from memory but leave the meshes(RAM and/or VRAM)
-
 RLAPI void AllocateMeshData(Mesh* mesh, int verts, int triangles, int colors, bool uvs, bool uv2s);	// takes an empty mesh and allocates buffers for the required sizes
 
 typedef void (*MeshGenerateCallback)(Mesh* mesh, void* userData);
