@@ -63,10 +63,10 @@ public:
 protected:
     float ViewScale = 1;
     bool Focused = true;
-    Vector3 CameraPosition;
+    Vector3 CameraPosition = { 0.0f,0.0f,0.0f };
 
-    Camera ViewCamera;
-    Vector2 FOV;
+    Camera ViewCamera = { 0 };
+    Vector2 FOV = { 0.0f, 0.0f };
 
     Vector2 PreviousMousePosition = { 0.0f, 0.0f };
 
