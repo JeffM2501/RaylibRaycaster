@@ -11,11 +11,18 @@
 
 #include "Map.h"
 
+class RenderFace
+{
+public:
+    Mesh    FaceMesh;
+    size_t  FaceMaterial;
+};
+
 class RenderCell
 {
 public:
     int Index = 0;
-    std::map<Directions, uint16_t> RenderFaces;
+    std::vector<RenderFace> RenderFaces;
     GridCell* MapCell;
     Rectangle Bounds;
 
@@ -30,7 +37,8 @@ public:
     Vector2 Ray;
     RenderCell* Target = nullptr;
 
-    RayCast() {}
+    RayCast(): Ray(Vector2{0,0}){ }
+
     RayCast(Vector2 ray) : Ray(ray) { }
 
     typedef std::shared_ptr<RayCast> Ptr;
@@ -39,8 +47,8 @@ public:
 class RaySet
 {
 public:
-    RayCast::Ptr Positive;
-    RayCast::Ptr Negative;
+	RayCast::Ptr Positive = nullptr;
+	RayCast::Ptr Negative = nullptr;
 
     inline void Bisect(RaySet& posSide, RaySet& negSide)
     {
@@ -91,8 +99,6 @@ public:
     std::vector<RaySet> DrawnRays;
 
 private:
-    uint16_t GetModelFromCache(size_t hash, std::map<size_t, uint16_t>& cache, Mesh& mesh);
-
     bool PointInCell(Vector2& postion, float radius, RenderCell* cellPtr);
 
     void CastRays(Vector2& origin);
@@ -106,23 +112,11 @@ private:
     float DrawScale = 1.0f;
     float RayAngleLimit = 1.0;
 
-    std::map<Directions, Mesh> DirectionMeshes;
-    std::map<uint16_t, Model> ModelCache;
-
     std::map<Directions, Color> DirectionColors;
 
     std::deque<RaySet> PendingRayCasts;
 
     std::map<int, RenderCell*> VisibleCells;
 
-    std::map<size_t, size_t> MaterialIndexMap;
-
-    class FaceDraw
-    {
-    public:
-        RenderCell* Cell;
-        Directions Dir;
-    };
-
-    std::map<uint16_t, std::vector<FaceDraw>> FacesToDraw;
+    std::map<size_t, std::vector<RenderFace*>> FacesToDraw;
 };

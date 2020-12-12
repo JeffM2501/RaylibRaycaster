@@ -5,27 +5,31 @@
 #include <cstdint>
 #include <memory>
 
-constexpr float xmin = -0.001f;
-constexpr float xmax = 1.001f;
+class CellParams
+{
+public:
+    float mapX = 0;
+    float mapY = 0;
 
-constexpr float zmin = -0.001f;
-constexpr float zmax = 1.001f;
-
-constexpr float ymin = 0;
-constexpr float ymax = 1;
+    float top = 0;
+    float bottom = 0;
+};
 
 void GenCeilingMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+    CellParams* data = static_cast<CellParams*>(userData);
+    if (data == nullptr)
+        return;
+
+    Vector3 minOrigin{ data->mapX, data->top, data->mapY };
+	Vector3 maxOrigin{ data->mapX+1, data->top, data->mapY + 1 };
 
     float vertices[] =
     {
-        xmin,ymin,zmin,
-        xmax,ymin,zmin,
-        xmin,ymin,zmax,
-        xmax,ymin,zmax,
+        minOrigin.x,minOrigin.y,minOrigin.z,
+        maxOrigin.x,minOrigin.y,minOrigin.z,
+        minOrigin.x,minOrigin.y,maxOrigin.z,
+        maxOrigin.x,minOrigin.y,maxOrigin.z,
     };
 
     float texcoords[] =
@@ -63,16 +67,19 @@ void GenCeilingMesh(Mesh* mesh, void* userData)
 
 void GenFloorMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+	CellParams* data = static_cast<CellParams*>(userData);
+	if (data == nullptr)
+		return;
+
+	Vector3 minOrigin{ data->mapX, data->bottom, data->mapY };
+	Vector3 maxOrigin{ data->mapX + 1, data->bottom, data->mapY + 1 };
 
     float vertices[] =
     {
-        xmin,ymin,zmin,
-        xmax,ymin,zmin,
-        xmin,ymin,zmax,
-        xmax,ymin,zmax,
+		minOrigin.x,minOrigin.y,minOrigin.z,
+		maxOrigin.x,minOrigin.y,minOrigin.z,
+		minOrigin.x,minOrigin.y,maxOrigin.z,
+		maxOrigin.x,minOrigin.y,maxOrigin.z,
     };
 
     float texcoords[] =
@@ -111,23 +118,28 @@ void GenFloorMesh(Mesh* mesh, void* userData)
 
 void GenWestMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+	CellParams* data = static_cast<CellParams*>(userData);
+	if (data == nullptr)
+		return;
+
+	Vector3 minOrigin{ data->mapX, data->bottom, data->mapY };
+	Vector3 maxOrigin{ data->mapX + 1, data->top, data->mapY + 1 };
+
+    float minV = 1.0f - (data->top - data->bottom);
 
     float vertices[] =
     {
-        xmin,ymax,zmin,
-        xmin,ymin,zmin,
-        xmin,ymax,zmax,
-        xmin,ymin,zmax,
+        minOrigin.x,maxOrigin.y,minOrigin.z,
+        minOrigin.x,minOrigin.y,minOrigin.z,
+        minOrigin.x,maxOrigin.y,maxOrigin.z,
+        minOrigin.x,minOrigin.y,maxOrigin.z,
     };
 
     float texcoords[] =
     {
-        1,0,
+        1,minV,
         1,1,
-        0,0,
+        0,minV,
         0,1,
     };
 
@@ -158,23 +170,28 @@ void GenWestMesh(Mesh* mesh, void* userData)
 
 void GenEastMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+	CellParams* data = static_cast<CellParams*>(userData);
+	if (data == nullptr)
+		return;
+
+	Vector3 minOrigin{ data->mapX, data->bottom, data->mapY };
+	Vector3 maxOrigin{ data->mapX + 1, data->top, data->mapY + 1 };
+
+	float minV = 1.0f - (data->top - data->bottom);
 
     float vertices[] =
     {
-        xmax,ymax,zmin,
-        xmax,ymin,zmin,
-        xmax,ymax,zmax,
-        xmax,ymin,zmax,
+		maxOrigin.x,maxOrigin.y,minOrigin.z,
+		maxOrigin.x,minOrigin.y,minOrigin.z,
+		maxOrigin.x,maxOrigin.y,maxOrigin.z,
+		maxOrigin.x,minOrigin.y,maxOrigin.z,
     };
 
     float texcoords[] =
     {
-        0,0,
+        0,minV,
         0,1,
-        1,0,
+        1,minV,
         1,1,
     };
 
@@ -205,23 +222,28 @@ void GenEastMesh(Mesh* mesh, void* userData)
 
 void GenSouthMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+	CellParams* data = static_cast<CellParams*>(userData);
+	if (data == nullptr)
+		return;
+
+	Vector3 minOrigin{ data->mapX, data->bottom, data->mapY };
+	Vector3 maxOrigin{ data->mapX + 1, data->top, data->mapY + 1 };
+
+	float minV = 1.0f - (data->top - data->bottom);
 
     float vertices[] =
     {
-        xmin,ymax,zmax,
-        xmin,ymin,zmax,
-        xmax,ymax,zmax,
-        xmax,ymin,zmax,
+		minOrigin.x,maxOrigin.y,maxOrigin.z,
+		minOrigin.x,minOrigin.y,maxOrigin.z,
+		maxOrigin.x,maxOrigin.y,maxOrigin.z,
+		maxOrigin.x,minOrigin.y,maxOrigin.z,
     };
 
     float texcoords[] =
     {
-        1,0,
+        1,minV,
         1,1,
-        0,0,
+        0,minV,
         0,1,
     };
 
@@ -252,23 +274,28 @@ void GenSouthMesh(Mesh* mesh, void* userData)
 
 void GenNorthMesh(Mesh* mesh, void* userData)
 {
-    float width = 1;
-    float height = 1;
-    float length = 1;
+	CellParams* data = static_cast<CellParams*>(userData);
+	if (data == nullptr)
+		return;
+
+	Vector3 minOrigin{ data->mapX, data->bottom, data->mapY };
+	Vector3 maxOrigin{ data->mapX + 1, data->top, data->mapY + 1 };
+
+	float minV = 1.0f - (data->top - data->bottom);
 
     float vertices[] =
     {
-        xmin,ymax,zmin,
-        xmin,ymin,zmin,
-        xmax,ymax,zmin,
-        xmax,ymin,zmin,
+		minOrigin.x,maxOrigin.y,minOrigin.z,
+		minOrigin.x,minOrigin.y,minOrigin.z,
+		maxOrigin.x,maxOrigin.y,minOrigin.z,
+		maxOrigin.x,minOrigin.y,minOrigin.z,
     };
 
     float texcoords[] =
     {
-        0,0,
+        0,minV,
         0,1,
-        1,0,
+        1,minV,
         1,1,
     };
 

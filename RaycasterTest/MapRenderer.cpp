@@ -1,6 +1,8 @@
 #include "MapRenderer.h"
 #include "ResourceManager.h"
 #include "FaceGeometry.h"
+#include "MaterialManager.h"
+#include "rlgl.h"
 
 MapRenderer::MapRenderer()
 {
@@ -23,35 +25,12 @@ size_t MapRenderer::SetupTexture(size_t textureID)
 
 void MapRenderer::CleanUp()
 {
-    RenderCells.clear();
-    for (auto& cacheItr : ModelCache)
-        UnloadModelKeepMeshes(cacheItr.second);
-
-    for (auto& meshItr : DirectionMeshes)
-        UnloadMesh(meshItr.second);
-}
-
-uint16_t MapRenderer::GetModelFromCache(size_t hash, std::map<size_t, uint16_t>& cache, Mesh& mesh)
-{
-    uint16_t id = uint16_t(ModelCache.size() + 1);
-
-    auto itr = cache.find(hash);
-    if (itr == cache.end())
+    for (auto& mesh : RenderCells)
     {
-        uint16_t id = uint16_t(ModelCache.size() + 1);
-        Model model = LoadModelFromMesh(mesh);
-
-        if (hash != 0)
-            SetMaterialTexture(model.materials, MAP_DIFFUSE, ResourceManager::GetTexture(hash));
-
-        cache[hash] = id;
-
-        ModelCache.emplace(id, model);
+        for (auto& f : mesh.RenderFaces)
+            UnloadMesh(f.FaceMesh);
     }
-    else
-        id = itr->second;
-
-    return id;
+    RenderCells.clear();
 }
 
 Color ColorFromNormal(Vector3 normal, Vector3& lightVector, float ambient, float boost = 1.0f)
@@ -69,27 +48,30 @@ Color ColorFromNormal(Vector3 normal, Vector3& lightVector, float ambient, float
     return ColorFromNormalized(Vector4{ factor, factor, factor,1 });
 }
 
+MeshGenerateCallback CallbackForDir(Directions dir)
+{
+    switch (dir)
+    {
+    case Directions::ZNeg:
+        return GenNorthMesh;
+    case Directions::ZPos:
+        return GenSouthMesh;
+    case Directions::XPos:
+        return GenEastMesh;
+    case Directions::XNeg:
+        return GenWestMesh;
+        break;
+    case Directions::YNeg:
+        return GenFloorMesh;
+    case Directions::YPos:
+        return GenCeilingMesh;
+    }
+
+    return nullptr;
+}
+
 void MapRenderer::Setup(GridMap::Ptr map, float scale)
 {
-    if (DirectionMeshes.size() == 0)
-    {
-        DirectionMeshes[Directions::XNeg] = GenMeshCustom(&GenWestMesh, nullptr);
-        DirectionMeshes[Directions::XPos] = GenMeshCustom(&GenEastMesh, nullptr);
-
-        DirectionMeshes[Directions::ZNeg] = GenMeshCustom(&GenNorthMesh, nullptr);
-        DirectionMeshes[Directions::ZPos] = GenMeshCustom(&GenSouthMesh, nullptr);
-
-        DirectionMeshes[Directions::YPos] = GenMeshCustom(&GenCeilingMesh, nullptr);
-        DirectionMeshes[Directions::YNeg] = GenMeshCustom(&GenFloorMesh, nullptr);
-    }
-
-    MaterialIndexMap.clear();
-    for (auto& mat : map->MaterialList)
-    {
-        size_t materialID = SetupTexture(ResourceManager::GetAssetID(mat.second));
-        MaterialIndexMap[mat.first] = materialID;
-    }
-
     DrawScale = scale;
     MapPointer = map;
 
@@ -113,6 +95,11 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
     DirectionColors[Directions::ZNeg] = ColorFromNormal(Vector3{ 0,0,1 }, sundir, ambient);
     DirectionColors[Directions::ZPos] = ColorFromNormal(Vector3{ 0,0,-1 }, sundir, ambient);
 
+    for (auto& tx : MapPointer->MaterialList)
+    {
+        SetupTexture(ResourceManager::GetAssetID(tx.second));
+    }
+
     RenderCells.clear();
     RenderCells.resize(map->GetCellCount());
 
@@ -129,15 +116,21 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
             renderCell->MapCell = cell;
             renderCell->Bounds = Rectangle{ cell->Position.x * DrawScale, cell->Position.y * DrawScale, DrawScale, DrawScale };
 
+            CellParams params;
+            params.mapX = cell->Position.x * DrawScale;
+            params.mapY = cell->Position.y * DrawScale;
+			params.bottom = cell->Floor / 16.0f;
+            params.top = params.bottom + (cell->Ceiling / 16.0f);
+
             for (auto& cellFace : cell->CellTextures)
             {
                 Directions dir = cellFace.first;
-                size_t materialID = MaterialIndexMap[cellFace.second];
 
-                if (caches.find(dir) == caches.end())
-                    caches[dir] = std::map<size_t, uint16_t>();
+				RenderFace face;
 
-                renderCell->RenderFaces[dir] = GetModelFromCache(materialID, caches[dir], DirectionMeshes[dir]);
+                face.FaceMesh = GenMeshCustom(CallbackForDir(dir), &params);
+                face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[cellFace.second], DirectionColors[dir]);
+                renderCell->RenderFaces.emplace_back(face);
             }
         });
 }
@@ -388,21 +381,14 @@ void MapRenderer::DrawFaces()
 {
     Vector3 pos{ 0, 0, 0 };
 
+    Matrix transform = MatrixIdentity();
+
     for (auto& faceListItr : FacesToDraw)
     {
+        const Material& material = MaterialManager::GetRuntimeMaterial(faceListItr.first);
         for (auto& face : faceListItr.second)
         {
-            RenderCell* cell = face.Cell;
-
-            pos.x = cell->MapCell->Position.x * DrawScale;
-            pos.z = cell->MapCell->Position.y * DrawScale;
-
-            if (face.Dir == Directions::YPos)
-                pos.y = DrawScale;
-            else
-                pos.y = 0;
-
-            DrawModel(ModelCache[faceListItr.first], pos, DrawScale, DirectionColors[face.Dir]);
+            rlDrawMesh(face->FaceMesh, material, transform);
         }
     }
 }
@@ -413,7 +399,7 @@ void MapRenderer::DrawCell(RenderCell* cell)
     for (auto& face : cell->RenderFaces)
     {
         ++DrawnFaces;
-        FacesToDraw[face.second].push_back(FaceDraw{ cell, face.first });
+        FacesToDraw[face.FaceMaterial].push_back(&face);
     }
 }
 
