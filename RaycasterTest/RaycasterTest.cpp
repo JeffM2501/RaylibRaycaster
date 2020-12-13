@@ -219,6 +219,12 @@ void Application::UpdateInput()
 		if (cell->MapCell->Ceiling < 255)
             MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor, cell->MapCell->Ceiling + 1);
 	}
+
+    if (IsKeyPressed(KEY_Z) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
+        MapEditor::Undo();
+
+	if (IsKeyPressed(KEY_Y) && (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)))
+		MapEditor::Redo();
 }
 
 double frameTime = 0;
@@ -252,6 +258,11 @@ void Application::DrawHUD()
 
 	DrawMiniMap(0, 0, 8, Renderer, ViewCamera);
 	DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, ViewCamera);
+
+    if (MapEditor::CanUndo())
+        DrawText("Undo", GetScreenWidth() / 2, 0, 20, RED);
+	if (MapEditor::CanRedo())
+		DrawText("Redo", GetScreenWidth() / 2, 20, 20, RED);
 
 //     if (Editor != nullptr)
 //         Editor->Draw();

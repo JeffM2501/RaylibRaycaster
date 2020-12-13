@@ -182,7 +182,7 @@ namespace MapEditor
 	{
 		if (!CanRedo())
 			return;
-		AddDirty(UndoBuffer[UndoIndex - 1]->Redo(MapPointer));
+		AddDirty(UndoBuffer[UndoIndex]->Redo(MapPointer));
 		UndoIndex++;
 		InvokeDirty();
 	}
