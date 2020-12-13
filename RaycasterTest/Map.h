@@ -20,14 +20,27 @@ enum class Directions
 	YPos = 5,	// ceiling
 };
 
+constexpr float DepthIncrement = 0.0625f;
+
 class GridCell
 {
 public:
+	int Index = 0;
 	std::map<Directions, size_t>  CellTextures;
 	uint8_t Floor = 128;
 	uint8_t Ceiling = 16;
 	Vector2i Position = { 0,0 };
 	inline bool IsSolid(){ return Floor == 255; }
+
+	float GetFloorValue()
+	{
+		return Floor * DepthIncrement;
+	}
+
+	float GetCeilingValue()
+	{
+		return GetFloorValue() + Ceiling * DepthIncrement;
+	}
 };
 
 class GridMap 
@@ -40,11 +53,18 @@ public:
 	bool LoadFromFile(const std::string& path);
 	void SaveToFile(const std::string& path);
 
-	const GridCell* GetCell(int x, int y) const;
+	GridCell* GetCell(int x, int y);
+	GridCell* GetCell(int index);
+	GridCell* GetDirectionCell(GridCell* sourceCell, Directions dir);
+	GridCell* GetDirectionCell(int sourceIndex, Directions dir);
+
 	inline const Vector2i GetSize() const { return Size; }
 	inline size_t GetCellCount() const { return Cells.size(); };
 
 	void DoForEachCell(std::function<void(GridCell* cell)> func);
+
+	typedef std::function<void(size_t id, const std::string& path)> MaterialFunction;
+	MaterialFunction MaterialAdded;
 
 	size_t AddMaterial(const std::string& path);
 

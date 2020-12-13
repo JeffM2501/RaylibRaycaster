@@ -9,6 +9,7 @@
 #include "Map.h"
 #include "MapRenderer.h"
 #include "HudWidgets.h"
+#include "MapEditorService.h"
 
 #include <string>
 
@@ -110,7 +111,16 @@ void Application::Setup()
     Map = std::make_shared<GridMap>();
 
     Map->LoadFromFile(ResourceManager::GetAssetPath("raylib.gridmap"));
+
+    Map->MaterialAdded = { [this](size_t id, const std::string& path) {Renderer.SetupTexture(ResourceManager::GetAssetID(path)); } };
+
     Renderer.Setup(Map, scale);
+
+    MapEditor::SetDefaultTextures("textures/wall/tile065.png", "textures/wall/tile097.png", "textures/wall/tile128.png");
+
+    MapEditor::Init(Map);
+    MapEditor::SetDirtyCallback([this](int cell) {Renderer.BuildCellGeo(Renderer.GetCell(cell)); });
+
     //--------------------------------------------------------------------------------------
 
     WindowSize.x = GetScreenWidth();
@@ -186,46 +196,28 @@ void Application::UpdateInput()
         return;
     // edit commands
 
+    bool dirty = false;
     if (IsKeyPressed(KEY_B))
     {
         if (cell->MapCell->Floor > 0)
-        {
-            --cell->MapCell->Floor;
-            ++cell->MapCell->Ceiling;
-        }
-
-        Renderer.BuildCellGeo(cell);
+            MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor - 1, cell->MapCell->Ceiling + 1);
     }
 	else if (IsKeyPressed(KEY_G))
 	{
         if (cell->MapCell->Floor < 255)
-        {
-            ++cell->MapCell->Floor;
-            if (cell->MapCell->Ceiling > 0)
-                --cell->MapCell->Ceiling;
-        }
+            MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor + 1, cell->MapCell->Ceiling - 1);
 
-        Renderer.BuildCellGeo(cell);
 	}
-
 
 	if (IsKeyPressed(KEY_V))
 	{
 		if (cell->MapCell->Ceiling > 0)
-		{
-			--cell->MapCell->Ceiling;
-		}
-
-		Renderer.BuildCellGeo(cell);
+            MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor, cell->MapCell->Ceiling - 1);
 	}
 	else if (IsKeyPressed(KEY_F))
 	{
 		if (cell->MapCell->Ceiling < 255)
-		{
-			++cell->MapCell->Ceiling;
-		}
-
-		Renderer.BuildCellGeo(cell);
+            MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor, cell->MapCell->Ceiling + 1);
 	}
 }
 

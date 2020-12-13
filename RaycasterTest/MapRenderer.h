@@ -10,6 +10,7 @@
 #include <deque>
 
 #include "Map.h"
+#include "FaceGeometry.h"
 
 class RenderFace
 {
@@ -18,10 +19,10 @@ public:
     size_t  FaceMaterial;
 };
 
+
 class RenderCell
 {
 public:
-    int Index = 0;
     std::vector<RenderFace> RenderFaces;
     GridCell* MapCell;
     Rectangle Bounds;
@@ -29,6 +30,16 @@ public:
     bool checkedForHit;
     bool hitCell;
     bool currentCell;
+
+    float GetFloorValue()
+    {
+        return MapCell->GetFloorValue();
+    }
+
+    float GetCeilingValue()
+    {
+        return MapCell->GetCeilingValue();
+    }
 };
 
 class RayCast
@@ -76,13 +87,15 @@ public:
     RenderCell* GetCell(int x, int y);
     RenderCell* GetCell(float x, float y);
     RenderCell* GetCell(const Vector3& cameraPos);
+    RenderCell* GetCell(int index);
+    RenderCell* GetDirectionCell(RenderCell* sourceCell, Directions dir);
 
     void DoForEachCell(std::function<void(RenderCell* cell)> func, bool visible = false);
 
     void ComputeVisibility(const Camera& camera, float fovX);
     void Draw();
 
-    size_t SetupTexture(size_t textureID);
+    size_t SetupTexture(size_t textureID) const;
 
     bool CollideWithMap(Vector3& postion, float radius);
 
@@ -108,6 +121,8 @@ private:
     void GetTarget(RayCast::Ptr ray, Vector2& origin);
 
     void AddVisCell(RenderCell* cell);
+
+    RenderFace MakeFace(Directions dir, CellParams* params, size_t material);
 
     void DrawCell(RenderCell* cell);
     void DrawFaces();

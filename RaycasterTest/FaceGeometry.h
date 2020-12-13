@@ -15,7 +15,7 @@ public:
     float bottom = 0;
 };
 
-void GenCeilingMesh(Mesh* mesh, void* userData)
+inline void GenCeilingMesh(Mesh* mesh, void* userData)
 {
     CellParams* data = static_cast<CellParams*>(userData);
     if (data == nullptr)
@@ -65,7 +65,7 @@ void GenCeilingMesh(Mesh* mesh, void* userData)
     mesh->triangleCount = 2;
 }
 
-void GenFloorMesh(Mesh* mesh, void* userData)
+inline void GenFloorMesh(Mesh* mesh, void* userData)
 {
 	CellParams* data = static_cast<CellParams*>(userData);
 	if (data == nullptr)
@@ -116,7 +116,7 @@ void GenFloorMesh(Mesh* mesh, void* userData)
     mesh->triangleCount = 2;
 }
 
-void GenWestMesh(Mesh* mesh, void* userData)
+inline void GenWestMesh(Mesh* mesh, void* userData)
 {
 	CellParams* data = static_cast<CellParams*>(userData);
 	if (data == nullptr)
@@ -168,7 +168,7 @@ void GenWestMesh(Mesh* mesh, void* userData)
     mesh->triangleCount = 2;
 }
 
-void GenEastMesh(Mesh* mesh, void* userData)
+inline void GenEastMesh(Mesh* mesh, void* userData)
 {
 	CellParams* data = static_cast<CellParams*>(userData);
 	if (data == nullptr)
@@ -220,7 +220,7 @@ void GenEastMesh(Mesh* mesh, void* userData)
     mesh->triangleCount = 2;
 }
 
-void GenSouthMesh(Mesh* mesh, void* userData)
+inline void GenSouthMesh(Mesh* mesh, void* userData)
 {
 	CellParams* data = static_cast<CellParams*>(userData);
 	if (data == nullptr)
@@ -272,7 +272,7 @@ void GenSouthMesh(Mesh* mesh, void* userData)
     mesh->triangleCount = 2;
 }
 
-void GenNorthMesh(Mesh* mesh, void* userData)
+inline void GenNorthMesh(Mesh* mesh, void* userData)
 {
 	CellParams* data = static_cast<CellParams*>(userData);
 	if (data == nullptr)

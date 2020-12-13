@@ -14,10 +14,10 @@ MapRenderer::~MapRenderer()
 
 }
 
-size_t MapRenderer::SetupTexture(size_t textureID)
+size_t MapRenderer::SetupTexture(size_t textureID) const
 {
     auto& texture = ResourceManager::GetTexture(textureID);
-    SetTextureWrap(texture, WRAP_CLAMP);
+    SetTextureWrap(texture, WRAP_REPEAT);
     SetTextureFilter(texture, FILTER_ANISOTROPIC_16X);
     GenTextureMipmaps((Texture2D*)(&texture));
     return textureID;
@@ -60,7 +60,6 @@ MeshGenerateCallback CallbackForDir(Directions dir)
         return GenEastMesh;
     case Directions::XNeg:
         return GenWestMesh;
-        break;
     case Directions::YNeg:
         return GenFloorMesh;
     case Directions::YPos:
@@ -70,8 +69,32 @@ MeshGenerateCallback CallbackForDir(Directions dir)
     return nullptr;
 }
 
+RenderCell* MapRenderer::GetDirectionCell(RenderCell* sourceCell, Directions dir)
+{
+    if (sourceCell == nullptr)
+        return nullptr;
+
+    int xOffset = dir == Directions::XPos ? 1 : dir == Directions::XNeg ? -1 : 0;
+    int yOffset = dir == Directions::ZPos ? 1 : dir == Directions::ZNeg ? -1 : 0;
+
+    return GetCell(sourceCell->MapCell->Position.x + xOffset, sourceCell->MapCell->Position.y + yOffset);
+}
+
+RenderFace MapRenderer::MakeFace(Directions dir, CellParams* params, size_t material)
+{
+    RenderFace face;
+
+	face.FaceMesh = GenMeshCustom(CallbackForDir(dir), params);
+	face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[material], DirectionColors[dir]);
+
+    return face;
+}
+
 void MapRenderer::BuildCellGeo(RenderCell* cell)
 {
+    if (cell == nullptr)
+        return;
+
     for (auto f : cell->RenderFaces)
         UnloadMesh(f.FaceMesh);
 
@@ -82,18 +105,62 @@ void MapRenderer::BuildCellGeo(RenderCell* cell)
 	CellParams params;
 	params.mapX = cell->MapCell->Position.x * DrawScale;
 	params.mapY = cell->MapCell->Position.y * DrawScale;
-	params.bottom = cell->MapCell->Floor / 16.0f;
-	params.top = params.bottom + (cell->MapCell->Ceiling / 16.0f);
+    float floor = cell->GetFloorValue();
+    float celing = cell->GetCeilingValue();
 
 	for (auto& cellFace : cell->MapCell->CellTextures)
 	{
 		Directions dir = cellFace.first;
 
-		RenderFace face;
+        bool fullFace = false;
+        
+		params.bottom = floor;
+		params.top = celing;
 
-		face.FaceMesh = GenMeshCustom(CallbackForDir(dir), &params);
-		face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[cellFace.second], DirectionColors[dir]);
-        cell->RenderFaces.emplace_back(face);
+        if (dir == Directions::YNeg || dir == Directions::YPos)
+        {
+			cell->RenderFaces.emplace_back(MakeFace(dir,&params,cellFace.second));
+        }
+        else
+        {
+            RenderCell* otherCell = GetDirectionCell(cell, dir);
+            if (otherCell == nullptr)
+                continue;
+
+            float otherFloor = otherCell->GetFloorValue();
+            float otherCeiling = otherCell->GetCeilingValue();
+
+            if (floor >= otherFloor && celing <= otherCeiling) // no need for walls
+                continue;
+
+            // see if the other cell gives us a full face?
+            if (otherCell->MapCell->IsSolid() || otherFloor > celing || otherCeiling < floor)
+            {
+                cell->RenderFaces.emplace_back(MakeFace(dir, &params, cellFace.second));
+            }
+            else
+            {
+				// see if the other cell has a higher floor than us
+
+                if (otherFloor > floor)
+                {
+					params.bottom = floor;
+					params.top = otherFloor;
+
+                    cell->RenderFaces.emplace_back(MakeFace(dir, &params, cellFace.second));
+                }
+
+			    // see if the other cell has a lower ceiling than us
+
+                if (otherCeiling < celing)
+                {
+                    params.bottom = otherCeiling;
+					params.top = celing;
+
+					cell->RenderFaces.emplace_back(MakeFace(dir, &params, cellFace.second));
+                }
+            }
+        }
 	}
 }
 
@@ -136,17 +203,17 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
             RenderCellVecItr renderCell = RenderCells.begin() + count;
 
             RenderCell& rCell = *renderCell;
-            renderCell->Index = count;
-
             ++count;
 
             renderCell->MapCell = cell;
             renderCell->Bounds = Rectangle{ cell->Position.x * DrawScale, cell->Position.y * DrawScale, DrawScale, DrawScale };
-
-            BuildCellGeo(&rCell);
         });
-}
 
+	DoForEachCell([&count, this](RenderCell* cell)
+		{
+			BuildCellGeo(cell);
+		});
+}
 
 void MapRenderer::DoForEachCell(std::function<void(RenderCell* cell)> func, bool visible)
 {
@@ -171,6 +238,14 @@ RenderCell* MapRenderer::GetCell(int x, int y)
         return nullptr;
 
     return &(*(RenderCells.begin() + (size_t(y) * size_t(MapPointer->GetSize().x) + x)));
+}
+
+RenderCell* MapRenderer::GetCell(int index)
+{
+	if (MapPointer == nullptr || RenderCells.empty() || index < 0 || index >= RenderCells.size())
+		return nullptr;
+
+	return &(*(RenderCells.begin() + index));
 }
 
 RenderCell* MapRenderer::GetCell(float x, float y)
@@ -256,8 +331,8 @@ void MapRenderer::AddVisCell(RenderCell* cell)
     if (cell == nullptr)
         return;
 
-    if (VisibleCells.find(cell->Index) == VisibleCells.end())
-        VisibleCells.emplace(cell->Index, cell);
+    if (VisibleCells.find(cell->MapCell->Index) == VisibleCells.end())
+        VisibleCells.emplace(cell->MapCell->Index, cell);
 }
 
 void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
@@ -345,7 +420,7 @@ void MapRenderer::CastRays(Vector2& origin)
         // both are hitting the same target, we are done
         if (set.Positive->Target != nullptr && set.Negative->Target != nullptr)
         {
-            if (set.Positive->Target->Index != set.Negative->Target->Index) // split and continue
+            if (set.Positive->Target->MapCell->Index != set.Negative->Target->MapCell->Index) // split and continue
             {
                 if (Vector2DotProduct(set.Positive->Ray, set.Negative->Ray) < RayAngleLimit)
                 {

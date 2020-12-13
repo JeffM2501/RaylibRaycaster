@@ -51,6 +51,9 @@
     <ClInclude Include="MaterialManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MapEditorService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RaycasterTest.cpp">
@@ -78,6 +81,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MaterialManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MapEditorService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

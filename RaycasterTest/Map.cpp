@@ -70,6 +70,9 @@ size_t GridMap::AddMaterial(const std::string& path)
 
 	++maxId;
 	MaterialList[maxId] = path;
+	if (MaterialAdded != nullptr)
+		MaterialAdded(maxId, path);
+
 	return maxId;
 }
 
@@ -126,6 +129,7 @@ bool GridMap::LoadFromFile(const std::string& path)
 			for (int i = 0; i < cellCount; ++i)
 			{
 				GridCell &cell = Cells[i];
+				cell.Index = i;
 				cell.Position.y = i / Size.x;
 				cell.Position.x = i - (cell.Position.y * Size.x);
 				
@@ -215,12 +219,36 @@ void GridMap::SaveToFile(const std::string& path)
 		fclose(fp);
 }
 
-const GridCell* GridMap::GetCell(int x, int y) const
+GridCell* GridMap::GetCell(int x, int y)
 {
 	if (Cells.empty() || x < 0 || x >= Size.x || y < 0 || y >= Size.y)
 		return nullptr;
 
 	return &(*(Cells.begin() + (size_t(y) * size_t(Size.x) + x)));
+}
+
+GridCell* GridMap::GetCell(int index)
+{
+	if (Cells.empty() || index < 0 || index >= Cells.size())
+		return nullptr;
+
+	return &(*(Cells.begin() + index));
+}
+
+GridCell* GridMap::GetDirectionCell(GridCell* sourceCell, Directions dir)
+{
+	if (sourceCell == nullptr)
+		return nullptr;
+
+	int xOffset = dir == Directions::XPos ? 1 : dir == Directions::XNeg ? -1 : 0;
+	int yOffset = dir == Directions::ZPos ? 1 : dir == Directions::ZNeg ? -1 : 0;
+
+	return GetCell(((sourceCell->Position.y + yOffset) * Size.x) + sourceCell->Position.x + xOffset);
+}
+
+GridCell* GridMap::GetDirectionCell(int sourceIndex, Directions dir)
+{
+	return GetDirectionCell(GetCell(sourceIndex), dir);
 }
 
 void GridMap::DoForEachCell(std::function<void(GridCell* cell)> func)
