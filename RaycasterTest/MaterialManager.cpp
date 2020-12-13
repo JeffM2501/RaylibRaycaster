@@ -89,4 +89,14 @@ namespace MaterialManager
 
 		return itr->second->EngineMaterial;
 	}
+
+	void Unload(size_t id)
+	{
+		std::map<size_t, std::shared_ptr<MaterialInfo>>::iterator itr = MaterialCache.find(id);
+		if (itr == MaterialCache.end())
+			return;
+
+		UnloadMaterial(itr->second->EngineMaterial);
+		MaterialCache.erase(itr);
+	}
 }

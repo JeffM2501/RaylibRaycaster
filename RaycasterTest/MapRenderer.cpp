@@ -70,6 +70,33 @@ MeshGenerateCallback CallbackForDir(Directions dir)
     return nullptr;
 }
 
+void MapRenderer::BuildCellGeo(RenderCell* cell)
+{
+    for (auto f : cell->RenderFaces)
+        UnloadMesh(f.FaceMesh);
+
+    cell->RenderFaces.clear();
+    if (cell->MapCell->IsSolid())
+        return;
+
+	CellParams params;
+	params.mapX = cell->MapCell->Position.x * DrawScale;
+	params.mapY = cell->MapCell->Position.y * DrawScale;
+	params.bottom = cell->MapCell->Floor / 16.0f;
+	params.top = params.bottom + (cell->MapCell->Ceiling / 16.0f);
+
+	for (auto& cellFace : cell->MapCell->CellTextures)
+	{
+		Directions dir = cellFace.first;
+
+		RenderFace face;
+
+		face.FaceMesh = GenMeshCustom(CallbackForDir(dir), &params);
+		face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[cellFace.second], DirectionColors[dir]);
+        cell->RenderFaces.emplace_back(face);
+	}
+}
+
 void MapRenderer::Setup(GridMap::Ptr map, float scale)
 {
     DrawScale = scale;
@@ -103,12 +130,12 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
     RenderCells.clear();
     RenderCells.resize(map->GetCellCount());
 
-    std::map<Directions, std::map<size_t, uint16_t>> caches;
-
     int count = 0;
-    map->DoForEachCell([&count, &caches,this](GridCell* cell)
+    map->DoForEachCell([&count, this](GridCell* cell)
         {
             RenderCellVecItr renderCell = RenderCells.begin() + count;
+
+            RenderCell& rCell = *renderCell;
             renderCell->Index = count;
 
             ++count;
@@ -116,22 +143,7 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
             renderCell->MapCell = cell;
             renderCell->Bounds = Rectangle{ cell->Position.x * DrawScale, cell->Position.y * DrawScale, DrawScale, DrawScale };
 
-            CellParams params;
-            params.mapX = cell->Position.x * DrawScale;
-            params.mapY = cell->Position.y * DrawScale;
-			params.bottom = cell->Floor / 16.0f;
-            params.top = params.bottom + (cell->Ceiling / 16.0f);
-
-            for (auto& cellFace : cell->CellTextures)
-            {
-                Directions dir = cellFace.first;
-
-				RenderFace face;
-
-                face.FaceMesh = GenMeshCustom(CallbackForDir(dir), &params);
-                face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[cellFace.second], DirectionColors[dir]);
-                renderCell->RenderFaces.emplace_back(face);
-            }
+            BuildCellGeo(&rCell);
         });
 }
 
@@ -164,6 +176,11 @@ RenderCell* MapRenderer::GetCell(int x, int y)
 RenderCell* MapRenderer::GetCell(float x, float y)
 {
     return GetCell((int)std::floor(x), (int)std::floor(y));
+}
+
+RenderCell* MapRenderer::GetCell(const Vector3& cameraPos)
+{
+    return GetCell(cameraPos.x / DrawScale, cameraPos.z / DrawScale);
 }
 
 bool MapRenderer::PointInCell(Vector2& postion, float radius, RenderCell* cellPtr)

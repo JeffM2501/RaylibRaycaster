@@ -1,14 +1,25 @@
 #include "HudWidgets.h"
 
+RenderTexture VisMapTexture = RenderTexture{ 0 };
 
-void DrawMiniMap(int posX, int posY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
+void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
 {
+    int posX = 0;
+    int posY = 0;
     auto size = renderer.MapPointer->GetSize();
 
     int miniMapWidth = size.x * gridSize;
     int minMapHeight = size.y * gridSize;
 
-    DrawRectangle(posX, posY, miniMapWidth, minMapHeight, GRAY);
+    constexpr Vector2 zero{ 0,0 };
+
+	if (VisMapTexture.texture.width == 0)
+	{
+        VisMapTexture = LoadRenderTexture(miniMapWidth, minMapHeight);
+	}
+
+	BeginTextureMode(VisMapTexture);
+	ClearBackground(GRAY);
 
     renderer.DoForEachCell([posX,posY,gridSize](RenderCell* cell)
         {
@@ -46,12 +57,12 @@ void DrawMiniMap(int posX, int posY, int gridSize, MapRenderer& renderer, const 
     Vector2 posFOV = Vector2Rotate(targetVec, camera.GetFOVX() * 0.5f);
     targetX = localX + (int)(posFOV.x * gridSize * 10);
     targetY = localY + (int)(posFOV.y * gridSize * 10);
-    DrawLine(localX, localY, targetX, targetY, GREEN);
+    DrawLine(localX, localY, targetX, targetY, DARKGREEN);
 
     posFOV = Vector2Rotate(targetVec, -camera.GetFOVX() * 0.5f);
     targetX = localX + (int)(posFOV.x * gridSize * 10);
     targetY = localY + (int)(posFOV.y * gridSize * 10);
-    DrawLine(localX, localY, targetX, targetY, GREEN);
+    DrawLine(localX, localY, targetX, targetY, DARKGREEN);
 
     if (debug)
     {
@@ -103,12 +114,30 @@ void DrawMiniMap(int posX, int posY, int gridSize, MapRenderer& renderer, const 
             }
         }
     }
+	EndTextureMode();
+
+	DrawTexturePro(VisMapTexture.texture,
+		Rectangle{ 0,0, (float)VisMapTexture.texture.width, (float)-VisMapTexture.texture.height },
+		Rectangle{ (float)screenX, (float)screenY, (float)VisMapTexture.texture.width, (float)VisMapTexture.texture.height },
+		zero, 0, WHITE);
 }
 
-void DrawMiniMapZoomed(int posX, int posY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
+RenderTexture MiniMapTexture = RenderTexture{ 0 };
+
+void DrawMiniMapZoomed(int screenX, int screenY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
 {
-    int miniMapWidth = 5 * gridSize;
-    int minMapHeight = 5 * gridSize;
+    int posX = 0;
+    int posY = 0;
+	int miniMapWidth = 5 * gridSize;
+	int minMapHeight = 5 * gridSize;
+
+    if (MiniMapTexture.texture.width == 0)
+    {
+        MiniMapTexture = LoadRenderTexture(miniMapWidth, minMapHeight);
+    }
+
+    BeginTextureMode(MiniMapTexture);
+    ClearBackground(DARKGRAY);
 
     Vector2 mapCamera = { camera.GetCameraPosition().x / renderer.GetDrawScale(), camera.GetCameraPosition().z / renderer.GetDrawScale() };
 
@@ -125,13 +154,15 @@ void DrawMiniMapZoomed(int posX, int posY, int gridSize, MapRenderer& renderer, 
     Vector2 gridOffset{ mapCamera.x - mapX, mapCamera.y - mapY };
     Vector2 localOffset = Vector2Scale(gridOffset, (float)-gridSize);
 
-    constexpr Color transColor{ 128,128,128,128 };
-    constexpr Color checkedColor{ 128,255,128,128 };
-    constexpr Color checkedSolidColor{ 128,128,255,128 };
+    constexpr unsigned char alpha = 255;
+    constexpr Color transColor{ 128,128,128,alpha };
+    constexpr Color checkedColor{ 64,128,64,alpha };
+    constexpr Color checkedSolidColor{ 128,128,255,alpha };
+    constexpr Vector2 zero{ 0,0 };
 
-    for (int y = -2; y <= +2; ++y)
+    for (int y = -3; y <= +3; ++y)
     {
-        for (int x = -2; x <= +2; ++x)
+        for (int x = -3; x <= +3; ++x)
         {
             const RenderCell* cellPtr = renderer.GetCell(mapX + x, mapY + y);
             if (cellPtr == nullptr)
@@ -139,21 +170,15 @@ void DrawMiniMapZoomed(int posX, int posY, int gridSize, MapRenderer& renderer, 
 
             Vector2 gridOffset{ (float)x * gridSize, (float)y * gridSize };
 
-            Color color = cellPtr->checkedForHit ? checkedColor : transColor;
+            Color color = transColor;
 
             if (cellPtr->MapCell->IsSolid())
             {
                 if (cellPtr->hitCell)
                     color = RED;
-                else if (cellPtr->checkedForHit)
-                    color = checkedSolidColor;
                 else
                     color = BLUE;
             }
-
-            if (cellPtr->currentCell)
-                color = ORANGE;
-
             DrawRectangleF(posX + localOffset.x - 1 + centerX + gridOffset.x, posY + localOffset.y - 1 + centerY + gridOffset.y, gridSize - 1.0f, gridSize - 1.0f, color);
         }
     }
@@ -165,4 +190,22 @@ void DrawMiniMapZoomed(int posX, int posY, int gridSize, MapRenderer& renderer, 
 
     Vector2 negFov = Vector2Scale(Vector2Rotate(targetVec, -camera.GetFOVX()* 0.5f), gridSize * 3.0f);
     DrawLineF(posX + centerX, posY + centerY, posX + centerX + negFov.x, posY + centerY + negFov.y, GREEN);
+
+    int dataFontSize = 20;
+
+    // draw current cell data
+
+    // postion
+    DrawText(TextFormat("X:%d Y:%d", mapX, mapY),0,minMapHeight- dataFontSize, dataFontSize,RAYWHITE);
+
+    // height info
+    const RenderCell* cellPtr = renderer.GetCell(mapX, mapY);
+    DrawText(TextFormat("F:%d C:%d", cellPtr->MapCell->Floor, cellPtr->MapCell->Ceiling), 0, minMapHeight - dataFontSize * 2, dataFontSize, RAYWHITE);
+
+    EndTextureMode();
+
+    DrawTexturePro(MiniMapTexture.texture,
+        Rectangle{ 0,0, (float)MiniMapTexture.texture.width, (float)-MiniMapTexture.texture.height },
+        Rectangle{ (float)screenX, (float)screenY, (float)MiniMapTexture.texture.width, (float)MiniMapTexture.texture.height },
+        zero, 0, WHITE);
 }

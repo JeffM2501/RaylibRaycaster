@@ -117,8 +117,8 @@ void GuiTest()
 	if (GuiTextBoxMulti(Rectangle{ 320, 25, 225, 140 }, multiTextBoxText, 256, multiTextBoxEditMode)) multiTextBoxEditMode = !multiTextBoxEditMode;
 	colorPickerValue = GuiColorPicker(Rectangle{ 320, 185, 196, 192 }, colorPickerValue);
 
-	sliderValue = GuiSlider(Rectangle{ 355, 400, 165, 20 }, "TEST", TextFormat("%2.2f", (float)sliderValue), sliderValue, -50, 100);
-	sliderBarValue = GuiSliderBar(Rectangle{ 320, 430, 200, 20 }, NULL, TextFormat("%i", (int)sliderBarValue), sliderBarValue, 0, 100);
+	sliderValue = GuiSlider(Rectangle{ 355, 400, 165, 20 }, "TEST", TextFormat("%2.2f", (float)sliderValue), (float)sliderValue, -50, 100);
+	sliderBarValue = GuiSliderBar(Rectangle{ 320, 430, 200, 20 }, NULL, TextFormat("%i", (int)sliderBarValue), (float)sliderBarValue, 0, 100);
 	progressValue = GuiProgressBar(Rectangle{ 320, 460, 200, 20 }, NULL, NULL, progressValue, 0, 1);
 
 	// NOTE: View rectangle could be used to perform some scissor test

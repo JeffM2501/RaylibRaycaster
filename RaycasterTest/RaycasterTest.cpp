@@ -123,12 +123,26 @@ void Application::Setup()
 
 bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
 {
+    auto cell = Renderer.GetCell(newPostion);
+
+    float floor = newPostion.y;
+
+    if (cell != nullptr)
+    {
+        floor = cell->MapCell->Floor / 16.0f;
+    }
+
     if (Renderer.CollideWithMap(newPostion, 0.1f))
     {
         newPostion = oldPostion;
         return false;
     }
 
+    if (newPostion.y != floor)
+    {
+        newPostion.y = floor;
+        return false;
+    }
     return true;
 }
 
@@ -166,6 +180,53 @@ void Application::UpdateInput()
 
   //  ViewCamera.UseMouseX = ViewCamera.UseMouseY = IsMouseButtonDown(1);
     ViewCamera.Update();
+
+    auto cell = Renderer.GetCell(ViewCamera.GetCameraPosition());
+    if (cell == nullptr)
+        return;
+    // edit commands
+
+    if (IsKeyPressed(KEY_B))
+    {
+        if (cell->MapCell->Floor > 0)
+        {
+            --cell->MapCell->Floor;
+            ++cell->MapCell->Ceiling;
+        }
+
+        Renderer.BuildCellGeo(cell);
+    }
+	else if (IsKeyPressed(KEY_G))
+	{
+        if (cell->MapCell->Floor < 255)
+        {
+            ++cell->MapCell->Floor;
+            if (cell->MapCell->Ceiling > 0)
+                --cell->MapCell->Ceiling;
+        }
+
+        Renderer.BuildCellGeo(cell);
+	}
+
+
+	if (IsKeyPressed(KEY_V))
+	{
+		if (cell->MapCell->Ceiling > 0)
+		{
+			--cell->MapCell->Ceiling;
+		}
+
+		Renderer.BuildCellGeo(cell);
+	}
+	else if (IsKeyPressed(KEY_F))
+	{
+		if (cell->MapCell->Ceiling < 255)
+		{
+			++cell->MapCell->Ceiling;
+		}
+
+		Renderer.BuildCellGeo(cell);
+	}
 }
 
 double frameTime = 0;

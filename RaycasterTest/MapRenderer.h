@@ -75,6 +75,7 @@ public:
 
     RenderCell* GetCell(int x, int y);
     RenderCell* GetCell(float x, float y);
+    RenderCell* GetCell(const Vector3& cameraPos);
 
     void DoForEachCell(std::function<void(RenderCell* cell)> func, bool visible = false);
 
@@ -97,6 +98,8 @@ public:
     GridMap::Ptr MapPointer;
 
     std::vector<RaySet> DrawnRays;
+
+    void BuildCellGeo(RenderCell* cell);
 
 private:
     bool PointInCell(Vector2& postion, float radius, RenderCell* cellPtr);
