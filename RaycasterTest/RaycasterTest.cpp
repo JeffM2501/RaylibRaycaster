@@ -18,69 +18,19 @@
 
 #include <string>
 
-class Application
-{
-public:
 
-    Application();
-    virtual ~Application();
+GridMap::Ptr Map;
+MapRenderer Renderer;
+FPCamera ViewCamera;
+MapVisibilitySet MainCameraViewSet(ViewCamera);
 
-    void Run();
+std::vector<int> SelectedCells;
 
-protected:
-    virtual void Setup();
-    virtual bool Update();
-    virtual void Cleanup();
+Texture BackgroundImage = { 0 };
 
-    virtual void UpdateInput();
+Vector2i WindowSize = { 1280,720 };
 
-    virtual void Draw3D();
-    virtual void DrawHUD();
-
-    bool CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion);
-
-    GridMap::Ptr Map;
-    MapRenderer Renderer;
-    FPCamera ViewCamera;
-    MapVisibilitySet MainCameraViewSet;
-
-    std::vector<int> SelectedCells;
-
-    Texture BackgroundImage = { 0 };
-
-    Vector2i WindowSize = { 1280,720 };
-
-    std::shared_ptr<EditorGui> Editor;
-};
-
-void Run()
-{
-    Application app;
-    app.Run();
-}
-
-
-Application::Application() :MainCameraViewSet(ViewCamera)
-{
-
-}
-
-Application::~Application()
-{
-
-}
-
-void Application::Run()
-{
-    Setup();
-    while (!WindowShouldClose())    // Detect window close button or ESC key
-    {
-        if (!Update())
-            break;
-    }
-
-    Cleanup();
-}
+std::shared_ptr<EditorGui> Editor;
 
 float ComputeFOV(Camera& camera)
 {
@@ -93,49 +43,7 @@ float ComputeFOV(Camera& camera)
     return 0;
 }
 
-void Application::Setup()
-{
-    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);  // Enable Multi Sampling Anti Aliasing 4x (if available)
-    InitWindow(WindowSize.x, WindowSize.y, "Raylib Raycaster test");
-
-    ResourceManager::Setup("assets/");
-    const Image& mapImage = ResourceManager::GetImage("cubicmap.png");
-
-    float scale = 1;
-
-    ViewCamera.UseMouseX = ViewCamera.UseMouseY = false;
-    ViewCamera.ValidateMapPostion = std::bind(&Application::CheckMapPos, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-    ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 128/16.0f, scale * 2 });
-    ViewCamera.MoveSpeed.z = 4; // units per second
-    ViewCamera.MoveSpeed.x = 2;
-    ViewCamera.ViewBobbleFreq = 20;
-
-    SetTargetFPS(120);
-
-    Map = std::make_shared<GridMap>();
-
-    Map->LoadFromFile(ResourceManager::GetAssetPath("raylib.gridmap"));
-
-    Map->MaterialAdded = { [this](size_t id, const std::string& path) {Renderer.SetupTexture(ResourceManager::GetAssetID(path)); } };
-
-    Renderer.Setup(Map, scale);
-
-    MapEditor::SetDefaultTextures("textures/wall/tile065.png", "textures/wall/tile097.png", "textures/wall/tile128.png");
-
-    MapEditor::Init(Map);
-    MapEditor::SetDirtyCallback([this](int cell) {Renderer.BuildCellGeo(Renderer.GetCell(cell)); });
-
-    //--------------------------------------------------------------------------------------
-
-    WindowSize.x = GetScreenWidth();
-    WindowSize.y = GetScreenHeight();
-
-    BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
-
-    Editor = std::make_shared<EditorGui>(Renderer, ViewCamera);
-}
-
-bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
+bool CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vector3& oldPostion)
 {
     auto cell = Renderer.GetCell(newPostion);
 
@@ -146,7 +54,7 @@ bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vecto
         floor = cell->MapCell->Floor / 16.0f;
     }
 
-    if (Map->CollideWithMap(Vector2{newPostion.x, newPostion.z}, 0.1f))
+    if (Map->CollideWithMap(Vector2{ newPostion.x, newPostion.z }, 0.1f))
     {
         newPostion = oldPostion;
         return false;
@@ -160,34 +68,49 @@ bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vecto
     return true;
 }
 
-bool Application::Update()
+void Setup()
 {
-    // Main game loop
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);  // Enable Multi Sampling Anti Aliasing 4x (if available)
+    InitWindow(WindowSize.x, WindowSize.y, "Raylib Raycaster test");
 
-    if (IsWindowResized())
-    {
-        WindowSize.x = GetScreenWidth();
-        WindowSize.y = GetScreenHeight();
-        ViewCamera.ViewResized();
-    }
+    ResourceManager::Setup("assets/");
+    const Image& mapImage = ResourceManager::GetImage("cubicmap.png");
 
-    if (IsWindowReady())
-    {
-        UpdateInput();
+    float scale = 1;
 
-        BeginDrawing();
-        ClearBackground(BLACK);
+    ViewCamera.UseMouseX = ViewCamera.UseMouseY = false;
+    ViewCamera.ValidateMapPostion = std::bind(CheckMapPos, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 128/16.0f, scale * 2 });
+    ViewCamera.MoveSpeed.z = 4; // units per second
+    ViewCamera.MoveSpeed.x = 2;
+    ViewCamera.ViewBobbleFreq = 20;
 
-        Draw3D();
-        DrawHUD();
+    SetTargetFPS(120);
 
-        EndDrawing();
-    }
-    
-    return true;
+    Map = std::make_shared<GridMap>();
+
+    Map->LoadFromFile(ResourceManager::GetAssetPath("raylib.gridmap"));
+
+    Map->MaterialAdded = { [](size_t id, const std::string& path) {Renderer.SetupTexture(ResourceManager::GetAssetID(path)); } };
+
+    Renderer.Setup(Map, scale);
+
+    MapEditor::SetDefaultTextures("textures/wall/tile065.png", "textures/wall/tile097.png", "textures/wall/tile128.png");
+
+    MapEditor::Init(Map);
+    MapEditor::SetDirtyCallback([](int cell) {Renderer.BuildCellGeo(Renderer.GetCell(cell)); });
+
+    //--------------------------------------------------------------------------------------
+
+    WindowSize.x = GetScreenWidth();
+    WindowSize.y = GetScreenHeight();
+
+    BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
+
+    Editor = std::make_shared<EditorGui>(Renderer, ViewCamera);
 }
 
-void Application::UpdateInput()
+void UpdateInput()
 {
     if (IsKeyPressed(KEY_F10))
         MainCameraViewSet.DrawEverything = !MainCameraViewSet.DrawEverything;
@@ -232,7 +155,7 @@ void Application::UpdateInput()
 }
 
 double frameTime = 0;
-void Application::Draw3D()
+void Draw3D()
 {
     DrawTexturePro(BackgroundImage, Rectangle{ 0,0,(float)BackgroundImage.width,(float)BackgroundImage.height }, Rectangle{ 0,0,(float)WindowSize.x,(float)WindowSize.y }, Vector2{ 0,0 }, 0, WHITE);
 
@@ -277,8 +200,9 @@ void Application::Draw3D()
     frameTime = GetTime() - frameTime;
 }
 
-void Application::DrawHUD()
+void DrawHUD()
 {
+    int toolbarSize = 35;
     DrawFPS(10, WindowSize.y - 30);
 
 	Vector3 pos = ViewCamera.GetCameraPosition();
@@ -291,22 +215,49 @@ void Application::DrawHUD()
 	const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)MainCameraViewSet.DrawnCells / (double)Map->GetCellCount()) * 100.0, MainCameraViewSet.DrawnFaces, frameTime * 1000);
 	DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
 
-	DrawMiniMap(0, 0, 8, Renderer, MainCameraViewSet);
-	DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, MainCameraViewSet);
+	DrawMiniMap(0, toolbarSize, 8, Renderer, MainCameraViewSet);
+	DrawMiniMapZoomed(WindowSize.x - (5 * 25), toolbarSize, 25, Renderer, MainCameraViewSet);
 
     if (MapEditor::CanUndo())
-        DrawText("Undo", GetScreenWidth() / 2, 0, 20, RED);
+        DrawText("Undo", GetScreenWidth() / 2, toolbarSize, 20, RED);
 	if (MapEditor::CanRedo())
-		DrawText("Redo", GetScreenWidth() / 2, 20, 20, RED);
+		DrawText("Redo", GetScreenWidth() / 2, toolbarSize+20, 20, RED);
 
 	if (SelectedCells.size() > 0)
-		DrawText(TextFormat("Selected %d", SelectedCells[0]), GetScreenWidth() / 2, 40, 20, RED);
+		DrawText(TextFormat("Selected %d", SelectedCells[0]), GetScreenWidth() / 2, toolbarSize+40, 20, RED);
 
       if (Editor != nullptr)
           Editor->Draw();
 }
 
-void Application::Cleanup()
+bool Update()
+{
+    // Main game loop
+
+    if (IsWindowResized())
+    {
+        WindowSize.x = GetScreenWidth();
+        WindowSize.y = GetScreenHeight();
+        ViewCamera.ViewResized();
+    }
+
+    if (IsWindowReady())
+    {
+        UpdateInput();
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        Draw3D();
+        DrawHUD();
+
+        EndDrawing();
+    }
+
+    return true;
+}
+
+void Cleanup()
 {
     Renderer.CleanUp();
 	Map = nullptr;
@@ -314,3 +265,14 @@ void Application::Cleanup()
 	CloseWindow();
 }
 
+void Run()
+{
+    Setup();
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        if (!Update())
+            break;
+    }
+
+    Cleanup();
+}
