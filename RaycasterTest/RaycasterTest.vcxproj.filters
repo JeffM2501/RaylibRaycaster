@@ -66,6 +66,9 @@
     <ClInclude Include="EditorGui.h">
       <Filter>Header Files\Map</Filter>
     </ClInclude>
+    <ClInclude Include="MapPicker.h">
+      <Filter>Header Files\Map</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RaycasterTest.cpp">
@@ -96,6 +99,9 @@
       <Filter>Source Files\Services</Filter>
     </ClCompile>
     <ClCompile Include="EditorGui.cpp">
+      <Filter>Source Files\Map\Edtor</Filter>
+    </ClCompile>
+    <ClCompile Include="MapPicker.cpp">
       <Filter>Source Files\Map\Edtor</Filter>
     </ClCompile>
   </ItemGroup>

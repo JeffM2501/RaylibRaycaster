@@ -102,6 +102,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     <ClInclude Include="HudWidgets.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="MapEditorService.h" />
+    <ClInclude Include="MapPicker.h" />
     <ClInclude Include="MapRenderer.h" />
     <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="RaycasterTest.h" />
@@ -116,6 +117,7 @@ copy $(SolutionDir)\bin\$(Platform)\$(Configuration).DLL\*.pdb $(SolutionDir)\bi
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Map.cpp" />
     <ClCompile Include="MapEditorService.cpp" />
+    <ClCompile Include="MapPicker.cpp" />
     <ClCompile Include="MapRenderer.cpp" />
     <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="RaycasterTest.cpp" />

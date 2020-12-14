@@ -74,6 +74,7 @@ public:
     FPCamera& ViewCamera;
 	std::deque<RaySet> PendingRayCasts;
 	std::map<int, RenderCell*> VisibleCells;
+    std::map<int, RenderCell*> TargetCells;
 	std::map<size_t, std::vector<RenderFace*>> FacesToDraw;
     
     std::vector<RaySet> DrawnRays;
@@ -113,16 +114,16 @@ public:
     void ComputeVisibility(MapVisibilitySet& viewSet);
     void Draw(MapVisibilitySet& viewSet);
     
-
 	void BuildCellGeo(RenderCell* cell);
     size_t SetupTexture(size_t textureID) const;
+
+    BoundingBox GetCellBBox(int index);
 
     typedef std::vector<RenderCell> RenderCellVec;
     typedef std::vector<RenderCell>::iterator RenderCellVecItr;
     RenderCellVec RenderCells;
 
     GridMap::Ptr MapPointer;
-
 
 private:
     void CastRays(Vector2& origin, MapVisibilitySet& viewSet);

@@ -23,6 +23,19 @@ size_t MapRenderer::SetupTexture(size_t textureID) const
     return textureID;
 }
 
+BoundingBox MapRenderer::GetCellBBox(int index)
+{
+    BoundingBox bbox = { 0 };
+
+    RenderCell* cell = GetCell(index);
+    if (cell != nullptr)
+    {
+        bbox.min = Vector3{ (float)cell->MapCell->Position.x, cell->GetFloorValue(),(float)cell->MapCell->Position.y };
+        bbox.max = Vector3{ (float)cell->MapCell->Position.x+1, cell->GetCeilingValue(),(float)cell->MapCell->Position.y+1 };
+    }
+    return bbox;
+}
+
 void MapRenderer::CleanUp()
 {
     for (auto& mesh : RenderCells)
@@ -269,8 +282,16 @@ void MapRenderer::AddVisCell(RenderCell* cell, MapVisibilitySet& viewSet)
     if (cell == nullptr)
         return;
 
-    if (viewSet.VisibleCells.find(cell->MapCell->Index) == viewSet.VisibleCells.end())
-        viewSet.VisibleCells.emplace(cell->MapCell->Index, cell);
+    if (cell->MapCell->IsSolid())
+    {
+		if (viewSet.TargetCells.find(cell->MapCell->Index) == viewSet.TargetCells.end())
+			viewSet.TargetCells.emplace(cell->MapCell->Index, cell);
+    }
+    else
+    {
+        if (viewSet.VisibleCells.find(cell->MapCell->Index) == viewSet.VisibleCells.end())
+            viewSet.VisibleCells.emplace(cell->MapCell->Index, cell);
+    }
 }
 
 void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin, MapVisibilitySet& viewSet)
@@ -378,6 +399,7 @@ void MapRenderer::CastRays(Vector2& origin, MapVisibilitySet& viewSet)
 void MapRenderer::ComputeVisibility(MapVisibilitySet& viewSet)
 {
     viewSet.VisibleCells.clear();
+    viewSet.TargetCells.clear();
 
     const Camera& camera = viewSet.ViewCamera.GetCamera();
 

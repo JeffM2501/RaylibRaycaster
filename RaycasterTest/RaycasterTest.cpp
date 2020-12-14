@@ -5,17 +5,18 @@
 #include "RaycasterTest.h"
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 #include "ResourceManager.h"
+#include "MaterialManager.h"
 #include "Map.h"
 #include "MapRenderer.h"
 #include "HudWidgets.h"
 #include "MapEditorService.h"
-
-#include <string>
-
-#include "raylib.h"
+#include "MapPicker.h"
 #include "FPCamera.h"
 #include "EditorGui.h"
+
+#include <string>
 
 class Application
 {
@@ -43,8 +44,9 @@ protected:
     FPCamera ViewCamera;
     MapVisibilitySet MainCameraViewSet;
 
+    std::vector<int> SelectedCells;
 
-    Texture BackgroundImage;
+    Texture BackgroundImage = { 0 };
 
     Vector2i WindowSize = { 1280,720 };
 
@@ -101,7 +103,7 @@ void Application::Setup()
 
     float scale = 1;
 
-    ViewCamera.UseMouseX = ViewCamera.UseMouseY = true;
+    ViewCamera.UseMouseX = ViewCamera.UseMouseY = false;
     ViewCamera.ValidateMapPostion = std::bind(&Application::CheckMapPos, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
     ViewCamera.Setup(scale, 45.0f, Vector3{ scale * 2, 128/16.0f, scale * 2 });
     ViewCamera.MoveSpeed.z = 4; // units per second
@@ -190,7 +192,7 @@ void Application::UpdateInput()
     if (IsKeyPressed(KEY_F10))
         MainCameraViewSet.DrawEverything = !MainCameraViewSet.DrawEverything;
 
-  //  ViewCamera.UseMouseX = ViewCamera.UseMouseY = IsMouseButtonDown(1);
+    ViewCamera.UseMouseX = ViewCamera.UseMouseY = IsMouseButtonDown(1);
     ViewCamera.Update();
 
     auto cell = Renderer.GetCell(ViewCamera.GetCameraPosition());
@@ -240,7 +242,37 @@ void Application::Draw3D()
     Renderer.ComputeVisibility(MainCameraViewSet);
     Renderer.Draw(MainCameraViewSet);
 
+    // check for picking
+	if (IsMouseButtonPressed(0))
+	{
+		if (!IsKeyDown(KEY_LEFT_SHIFT) && !IsKeyDown(KEY_RIGHT_SHIFT))
+			SelectedCells.clear();
+
+        auto results = MapPicker::PickFace(Renderer, MainCameraViewSet, GetMousePosition());
+		if (results.CellIndex >= 0)
+			SelectedCells.push_back(results.CellIndex);
+	}
+  
     DrawGizmo(Vector3{ 2 * Renderer.GetDrawScale(), 0.1f * Renderer.GetDrawScale(), 2 * Renderer.GetDrawScale() });
+
+    rlDisableDepthTest();
+    rlDisableDepthMask();
+    // draw any selected cells
+    for (auto cellIndex : SelectedCells)
+    {
+        auto cell = Renderer.GetCell(cellIndex);
+        for (auto f : cell->RenderFaces)
+        {
+            Material mat = MaterialManager::GetRuntimeMaterial(f.FaceMaterial);
+            Color ogColor = mat.maps[MAP_DIFFUSE].color;
+            mat.maps[MAP_DIFFUSE].color = DARKGREEN;
+            rlDrawMesh(f.FaceMesh, mat, MatrixIdentity());
+            mat.maps[MAP_DIFFUSE].color = ogColor;
+        }
+    }
+
+    rlEnableDepthMask();
+    rlEnableDepthTest();
     EndMode3D();
     frameTime = GetTime() - frameTime;
 }
@@ -267,8 +299,11 @@ void Application::DrawHUD()
 	if (MapEditor::CanRedo())
 		DrawText("Redo", GetScreenWidth() / 2, 20, 20, RED);
 
-//     if (Editor != nullptr)
-//         Editor->Draw();
+	if (SelectedCells.size() > 0)
+		DrawText(TextFormat("Selected %d", SelectedCells[0]), GetScreenWidth() / 2, 40, 20, RED);
+
+      if (Editor != nullptr)
+          Editor->Draw();
 }
 
 void Application::Cleanup()
