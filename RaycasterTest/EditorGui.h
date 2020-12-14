@@ -12,6 +12,18 @@ public:
 
 	void Draw();
 
+    enum class EditorModes
+    {
+        FPView,
+        MapView,
+    };
+
+    EditorModes EditViewMode = EditorModes::FPView;
+
+    void DrawMapMode();
+
+    void Check3DViewPick(MapVisibilitySet& viewSet);
+
 protected:
 	void ShowToolbar();
 

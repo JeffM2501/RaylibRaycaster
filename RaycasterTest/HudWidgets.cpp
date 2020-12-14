@@ -1,4 +1,5 @@
 #include "HudWidgets.h"
+#include "MapEditorService.h"
 
 RenderTexture VisMapTexture = RenderTexture{ 0 };
 
@@ -26,14 +27,23 @@ void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, 
             int localX = cell->MapCell->Position.x * gridSize + posX;
             int localY = cell->MapCell->Position.y * gridSize + posY;
 
-            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? DARKBLUE : GRAY);
+            Color color = cell->MapCell->IsSolid() ? DARKBLUE : GRAY;
+            if (MapEditor::CellIsSelected(cell->MapCell->Index))
+                color = cell->MapCell->IsSolid() ? MAROON : RED;
+
+            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, color);
         });
 
     renderer.DoForEachVisibleCell([posX, posY, gridSize](RenderCell* cell)
         {
             int localX = (int)(cell->MapCell->Position.x * gridSize + posX);
             int localY = (int)(cell->MapCell->Position.y * gridSize + posY);
-            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? BLUE : LIGHTGRAY);
+
+            Color color = cell->MapCell->IsSolid() ? BLUE : LIGHTGRAY;
+            if (MapEditor::CellIsSelected(cell->MapCell->Index))
+                color = cell->MapCell->IsSolid() ? DARKBLUE : PINK;
+
+            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, color);
         }, viewSet);
 
     Vector2 cameraInMapSpace = viewSet.ViewCamera.GetMapPosition();

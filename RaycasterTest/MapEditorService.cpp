@@ -16,6 +16,12 @@ namespace MapEditor
 
 	GridMap::Ptr MapPointer = nullptr;
 
+    void Init(GridMap::Ptr map)
+    {
+        DirtyCells.clear();
+        MapPointer = map;
+    }
+
 	void SetDefaultTextures(const std::string& wall, const std::string& floor, const std::string& celing)
 	{
 		DefaultWallTexture = wall;
@@ -151,11 +157,8 @@ namespace MapEditor
 		DirtyCells.clear();
 	}
 
-	void Init(GridMap::Ptr map)
-	{
-		DirtyCells.clear();
-		MapPointer = map;
-	}
+
+	// Actions
 
 	class EditAction
 	{
@@ -197,15 +200,69 @@ namespace MapEditor
 		return UndoBuffer.size() > 0 && UndoIndex < UndoBuffer.size();
 	}
 
-	void PushEdit(EditAction::Ptr action)
+    void PushEdit(EditAction::Ptr action)
+    {
+        AddDirty(action->Redo(MapPointer));
+        UndoBuffer.resize(UndoIndex);
+        UndoBuffer.emplace_back(action);
+        ++UndoIndex;
+        InvokeDirty();
+    }
+
+	// selections
+
+	std::vector<int> SelectedCells;
+	std::vector<std::tuple<int, Directions>> SelectedFaces;
+
+	void ClearCellSelections()
 	{
-		AddDirty(action->Redo(MapPointer));
-		UndoBuffer.resize(UndoIndex);
-		UndoBuffer.emplace_back(action);
-		++UndoIndex;
-		InvokeDirty();
+		SelectedCells.clear();
 	}
 
+	void ClearFaceSelections()
+	{
+		SelectedFaces.clear();
+	}
+
+	void SelectCell(int index, bool add)
+	{
+		if (!add)
+			ClearCellSelections();
+
+		if (!CellIsSelected(index))
+			SelectedCells.push_back(index);
+	}
+
+	void SelectCellFace(int index, Directions dir, bool add)
+	{
+        if (!add)
+			ClearFaceSelections();
+
+		if (!CellFaceIsSelected(index,dir))
+			SelectedFaces.push_back(std::tuple<int, Directions>(index, dir));
+	}
+
+	bool CellIsSelected(int index)
+	{
+		return std::find(SelectedCells.begin(), SelectedCells.end(), index) != SelectedCells.end();
+	}
+
+	bool CellFaceIsSelected(int index, Directions dir)
+	{
+        return std::find(SelectedFaces.begin(), SelectedFaces.end(), std::tuple<int, Directions>(index, dir)) != SelectedFaces.end();
+    }
+
+	std::vector<int> GetSelectedCells()
+	{
+		return SelectedCells;
+	}
+
+	std::vector<std::tuple<int, Directions>> GetSelectedFaces()
+	{
+		return SelectedFaces;
+	}
+
+	// topology
 	class SetCellHeight : public EditAction
 	{
 	public:

@@ -18,7 +18,6 @@
 
 #include <string>
 
-
 GridMap::Ptr Map;
 MapRenderer Renderer;
 FPCamera ViewCamera;
@@ -133,7 +132,6 @@ void UpdateInput()
 	{
         if (cell->MapCell->Floor < 255)
             MapEditor::SetCellHeights(cell->MapCell, cell->MapCell->Floor + 1, cell->MapCell->Ceiling - 1);
-
 	}
 
 	if (IsKeyPressed(KEY_V))
@@ -165,37 +163,33 @@ void Draw3D()
     Renderer.ComputeVisibility(MainCameraViewSet);
     Renderer.Draw(MainCameraViewSet);
 
-    // check for picking
-	if (IsMouseButtonPressed(0))
-	{
-		if (!IsKeyDown(KEY_LEFT_SHIFT) && !IsKeyDown(KEY_RIGHT_SHIFT))
-			SelectedCells.clear();
-
-        auto results = MapPicker::PickFace(Renderer, MainCameraViewSet, GetMousePosition());
-		if (results.CellIndex >= 0)
-			SelectedCells.push_back(results.CellIndex);
-	}
+    if (Editor != nullptr)
+        Editor->Check3DViewPick(MainCameraViewSet);
   
     DrawGizmo(Vector3{ 2 * Renderer.GetDrawScale(), 0.1f * Renderer.GetDrawScale(), 2 * Renderer.GetDrawScale() });
 
-    rlDisableDepthTest();
-    rlDisableDepthMask();
-    // draw any selected cells
-    for (auto cellIndex : SelectedCells)
+    if (Editor != nullptr)
     {
-        auto cell = Renderer.GetCell(cellIndex);
-        for (auto f : cell->RenderFaces)
+        constexpr Color HighlightColor = { 255,64,64,255 };
+        rlDisableDepthTest();
+        rlDisableDepthMask();
+        // draw any selected cells
+        for (auto cellIndex : MapEditor::GetSelectedCells())
         {
-            Material mat = MaterialManager::GetRuntimeMaterial(f.FaceMaterial);
-            Color ogColor = mat.maps[MAP_DIFFUSE].color;
-            mat.maps[MAP_DIFFUSE].color = DARKGREEN;
-            rlDrawMesh(f.FaceMesh, mat, MatrixIdentity());
-            mat.maps[MAP_DIFFUSE].color = ogColor;
+            auto cell = Renderer.GetCell(cellIndex);
+            for (auto f : cell->RenderFaces)
+            {
+                Material mat = MaterialManager::GetRuntimeMaterial(f.FaceMaterial);
+                Color ogColor = mat.maps[MAP_DIFFUSE].color;
+                mat.maps[MAP_DIFFUSE].color = HighlightColor;
+                rlDrawMesh(f.FaceMesh, mat, MatrixIdentity());
+                mat.maps[MAP_DIFFUSE].color = ogColor;
+            }
         }
-    }
 
-    rlEnableDepthMask();
-    rlEnableDepthTest();
+        rlEnableDepthMask();
+        rlEnableDepthTest();
+    }
     EndMode3D();
     frameTime = GetTime() - frameTime;
 }
@@ -225,9 +219,12 @@ void DrawHUD()
 
 	if (SelectedCells.size() > 0)
 		DrawText(TextFormat("Selected %d", SelectedCells[0]), GetScreenWidth() / 2, toolbarSize+40, 20, RED);
+}
 
-      if (Editor != nullptr)
-          Editor->Draw();
+void DrawEditorGUI()
+{
+    if (Editor != nullptr)
+        Editor->Draw();
 }
 
 bool Update()
@@ -248,8 +245,17 @@ bool Update()
         BeginDrawing();
         ClearBackground(BLACK);
 
-        Draw3D();
-        DrawHUD();
+        if (Editor != nullptr || Editor->EditViewMode == EditorGui::EditorModes::FPView)
+        {
+            Draw3D();
+            DrawHUD();
+        }
+        else
+        {
+            Editor->DrawMapMode();
+        }
+
+        DrawEditorGUI();
 
         EndDrawing();
     }
