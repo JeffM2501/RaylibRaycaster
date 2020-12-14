@@ -206,7 +206,6 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
             ++count;
 
             renderCell->MapCell = cell;
-            renderCell->Bounds = Rectangle{ cell->Position.x * DrawScale, cell->Position.y * DrawScale, DrawScale, DrawScale };
         });
 
 	DoForEachCell([&count, this](RenderCell* cell)
@@ -215,21 +214,22 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
 		});
 }
 
-void MapRenderer::DoForEachCell(std::function<void(RenderCell* cell)> func, bool visible)
+void MapRenderer::DoForEachCell(std::function<void(RenderCell* cell)> func)
 {
     if (func == nullptr)
         return;
 
-    if (visible)
-    {
-        for (auto& cell : VisibleCells)
-            func(cell.second);
-    }
-    else
-    {
-        for (RenderCell& cell : RenderCells)
-            func(&cell);
-    }
+	for (RenderCell& cell : RenderCells)
+		func(&cell);
+}
+
+void MapRenderer::DoForEachVisibleCell(std::function<void(RenderCell* cell)> func, MapVisibilitySet& viewSet)
+{
+	if (func == nullptr)
+		return;
+
+	for (auto& cell : viewSet.VisibleCells)
+		func(cell.second);
 }
 
 RenderCell* MapRenderer::GetCell(int x, int y)
@@ -258,84 +258,22 @@ RenderCell* MapRenderer::GetCell(const Vector3& cameraPos)
     return GetCell(cameraPos.x / DrawScale, cameraPos.z / DrawScale);
 }
 
-bool MapRenderer::PointInCell(Vector2& postion, float radius, RenderCell* cellPtr)
+
+Vector2 MapRenderer::ToMapPos(Vector3& postion)
 {
-    if (cellPtr == nullptr || cellPtr->MapCell == nullptr)
-        return true;
-
-    cellPtr->checkedForHit = true;
-
-    if (!cellPtr->MapCell->IsSolid())
-        return false;
-
-    radius *= DrawScale;
-
-    float minX = cellPtr->Bounds.x - radius;
-    float maxX = cellPtr->Bounds.x + cellPtr->Bounds.width + radius;
-    float minY = cellPtr->Bounds.y - radius;
-    float maxY = cellPtr->Bounds.y + cellPtr->Bounds.height + radius;
-
-    if (postion.x < minX || postion.x > maxX)
-        return false;
-
-    if (postion.y < minY || postion.y > maxY)
-        return false;
-
-    cellPtr->hitCell = true;
-    return true;
+    return Vector2{ postion.x / DrawScale, postion.z / DrawScale };
 }
 
-bool MapRenderer::CollideWithMap(Vector3& postion, float radius)
-{
-    for (auto& cell : RenderCells)
-    {
-        cell.checkedForHit = false;
-        cell.hitCell = false;
-        cell.currentCell = false;
-    }
-
-    Vector2 flatPos{ postion.x, postion.z };
-
-    int mapX = (int)std::floor(flatPos.x / DrawScale);
-    int mapY = (int)std::floor(flatPos.y / DrawScale);
-
-    auto ptr = GetCell(mapX, mapY);
-    ptr->currentCell = true;
-
-    if (PointInCell(flatPos, radius, ptr))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX + 1, mapY)))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX - 1, mapY)))
-        return true;
-
-    if (PointInCell(flatPos, radius, GetCell(mapX, mapY + 1)))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX + 1, mapY + 1)))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX - 1, mapY + 1)))
-        return true;
-
-    if (PointInCell(flatPos, radius, GetCell(mapX, mapY - 1)))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX + 1, mapY - 1)))
-        return true;
-    if (PointInCell(flatPos, radius, GetCell(mapX - 1, mapY - 1)))
-        return true;
-
-    return false;
-}
-
-void MapRenderer::AddVisCell(RenderCell* cell)
+void MapRenderer::AddVisCell(RenderCell* cell, MapVisibilitySet& viewSet)
 {
     if (cell == nullptr)
         return;
 
-    if (VisibleCells.find(cell->MapCell->Index) == VisibleCells.end())
-        VisibleCells.emplace(cell->MapCell->Index, cell);
+    if (viewSet.VisibleCells.find(cell->MapCell->Index) == viewSet.VisibleCells.end())
+        viewSet.VisibleCells.emplace(cell->MapCell->Index, cell);
 }
 
-void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
+void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin, MapVisibilitySet& viewSet)
 {
     if (ray->Target != nullptr)
         return;
@@ -375,7 +313,7 @@ void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
     }
 
     RenderCell* walkcell = GetCell(mapX, mapY);
-    AddVisCell(walkcell);
+    AddVisCell(walkcell, viewSet);
 
     while (walkcell != nullptr && !walkcell->MapCell->IsSolid())
     {
@@ -394,28 +332,29 @@ void MapRenderer::GetTarget(RayCast::Ptr ray, Vector2& origin)
         walkcell = GetCell(mapX, mapY);
 
         if (walkcell != nullptr && !walkcell->MapCell->IsSolid())
-            AddVisCell(walkcell);
+            AddVisCell(walkcell, viewSet);
 
         if (walkcell != nullptr)
             ray->Target = walkcell;
     }
 }
 
-void MapRenderer::CastRays(Vector2& origin)
+void MapRenderer::CastRays(Vector2& origin, MapVisibilitySet& viewSet)
 {
-    while (!PendingRayCasts.empty())
+    while (!viewSet. PendingRayCasts.empty())
     {
-        RaySet set = PendingRayCasts.front();
-        PendingRayCasts.pop_front();
+        RaySet set = viewSet.PendingRayCasts.front();
+        viewSet.PendingRayCasts.pop_front();
 
-        DrawnRays.emplace_back(set);
+        if (viewSet.TrackDrwnRays)
+            viewSet.DrawnRays.emplace_back(set);
 
         //if our rays aren't cast then cast them and get our targets
         if (set.Positive->Target == nullptr)
-            GetTarget(set.Positive, origin);
+            GetTarget(set.Positive, origin, viewSet);
 
         if (set.Negative->Target == nullptr)
-            GetTarget(set.Negative, origin);
+            GetTarget(set.Negative, origin, viewSet);
 
         // both are hitting the same target, we are done
         if (set.Positive->Target != nullptr && set.Negative->Target != nullptr)
@@ -428,54 +367,56 @@ void MapRenderer::CastRays(Vector2& origin)
                     RaySet negSeg;
                     set.Bisect(posSet, negSeg);
 
-                    PendingRayCasts.push_back(posSet);
-                    PendingRayCasts.push_back(negSeg);
+                    viewSet.PendingRayCasts.push_back(posSet);
+                    viewSet.PendingRayCasts.push_back(negSeg);
                 }
             }
         }
     }
 }
 
-void MapRenderer::ComputeVisibility(const Camera& camera, float fovX)
+void MapRenderer::ComputeVisibility(MapVisibilitySet& viewSet)
 {
-    VisibleCells.clear();
+    viewSet.VisibleCells.clear();
+
+    const Camera& camera = viewSet.ViewCamera.GetCamera();
 
     Vector2 mapCamera{ camera.position.x / DrawScale , camera.position.z / DrawScale };
     Vector2 viewVector{ camera.target.x - camera.position.x,camera.target.z - camera.position.z };
     viewVector = Vector2Normalize(viewVector);
 
     // our cell and those around us are always visible
-    AddVisCell(GetCell(mapCamera.x, mapCamera.y));
-    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y));
-    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y));
-    AddVisCell(GetCell(mapCamera.x, mapCamera.y - 1));
-    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y - 1));
-    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y - 1));
-    AddVisCell(GetCell(mapCamera.x, mapCamera.y + 1));
-    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y + 1));
-    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y + 1));
+    AddVisCell(GetCell(mapCamera.x, mapCamera.y), viewSet);
+    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y), viewSet);
+    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y), viewSet);
+    AddVisCell(GetCell(mapCamera.x, mapCamera.y - 1), viewSet);
+    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y - 1), viewSet);
+    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y - 1), viewSet);
+    AddVisCell(GetCell(mapCamera.x, mapCamera.y + 1), viewSet);
+    AddVisCell(GetCell(mapCamera.x - 1, mapCamera.y + 1), viewSet);
+    AddVisCell(GetCell(mapCamera.x + 1, mapCamera.y + 1), viewSet);
 
-    Vector2 posFOV = Vector2Rotate(viewVector, fovX * 0.5f);
-    Vector2 negFov = Vector2Rotate(viewVector, -fovX * 0.5f);
+    Vector2 posFOV = Vector2Rotate(viewVector, viewSet.ViewCamera.GetFOVX() * 0.5f);
+    Vector2 negFov = Vector2Rotate(viewVector, -viewSet.ViewCamera.GetFOVX() * 0.5f);
 
     // recursively raycast between vectors until we are done.
-    RaySet viewSet;
-    viewSet.Positive = std::make_shared<RayCast>(posFOV);
-    viewSet.Negative = std::make_shared<RayCast>(negFov);
+    RaySet viewRays;
+    viewRays.Positive = std::make_shared<RayCast>(posFOV);
+    viewRays.Negative = std::make_shared<RayCast>(negFov);
 
-    DrawnRays.clear();
-    PendingRayCasts.clear();
-    PendingRayCasts.push_back(viewSet);
-    CastRays(mapCamera);
+    viewSet.DrawnRays.clear();
+    viewSet.PendingRayCasts.clear();
+    viewSet.PendingRayCasts.push_back(viewRays);
+    CastRays(mapCamera,viewSet);
 }
 
-void MapRenderer::DrawFaces()
+void MapRenderer::DrawFaces(MapVisibilitySet& viewSet)
 {
     Vector3 pos{ 0, 0, 0 };
 
     Matrix transform = MatrixIdentity();
 
-    for (auto& faceListItr : FacesToDraw)
+    for (auto& faceListItr : viewSet.FacesToDraw)
     {
         const Material& material = MaterialManager::GetRuntimeMaterial(faceListItr.first);
         for (auto& face : faceListItr.second)
@@ -485,32 +426,32 @@ void MapRenderer::DrawFaces()
     }
 }
 
-void MapRenderer::DrawCell(RenderCell* cell)
+void MapRenderer::DrawCell(RenderCell* cell, MapVisibilitySet& viewSet)
 {
-    ++DrawnCells;
+    ++viewSet.DrawnCells;
     for (auto& face : cell->RenderFaces)
     {
-        ++DrawnFaces;
-        FacesToDraw[face.FaceMaterial].push_back(&face);
+        ++viewSet.DrawnFaces;
+        viewSet.FacesToDraw[face.FaceMaterial].push_back(&face);
     }
 }
 
-void MapRenderer::Draw()
+void MapRenderer::Draw(MapVisibilitySet& viewSet)
 {
-    FacesToDraw.clear();
-    DrawnCells = 0;
-    DrawnFaces = 0;
+    viewSet.FacesToDraw.clear();
+    viewSet.DrawnCells = 0;
+    viewSet.DrawnFaces = 0;
 
-    if (DrawEverything)
+    if (viewSet.DrawEverything)
     {
         for (auto& cell : RenderCells)
-            DrawCell(&cell);
+            DrawCell(&cell, viewSet);
     }
     else
     {
-        for (auto vis : VisibleCells)
-            DrawCell(vis.second);
+        for (auto vis : viewSet.VisibleCells)
+            DrawCell(vis.second, viewSet);
     }
 
-    DrawFaces();
+    DrawFaces(viewSet);
 }

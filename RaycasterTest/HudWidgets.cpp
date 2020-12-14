@@ -2,7 +2,7 @@
 
 RenderTexture VisMapTexture = RenderTexture{ 0 };
 
-void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
+void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, MapVisibilitySet& viewSet, bool debug)
 {
     int posX = 0;
     int posY = 0;
@@ -19,32 +19,32 @@ void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, 
 	}
 
 	BeginTextureMode(VisMapTexture);
-	ClearBackground(GRAY);
+	ClearBackground(DARKGRAY);
 
     renderer.DoForEachCell([posX,posY,gridSize](RenderCell* cell)
         {
             int localX = cell->MapCell->Position.x * gridSize + posX;
             int localY = cell->MapCell->Position.y * gridSize + posY;
 
-            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? BLACK : DARKGRAY);
+            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? DARKBLUE : GRAY);
         });
 
-    renderer.DoForEachCell([posX, posY, gridSize](RenderCell* cell)
+    renderer.DoForEachVisibleCell([posX, posY, gridSize](RenderCell* cell)
         {
             int localX = (int)(cell->MapCell->Position.x * gridSize + posX);
             int localY = (int)(cell->MapCell->Position.y * gridSize + posY);
-            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, LIGHTGRAY);
-        }, true);
+            DrawRectangle(localX + 1, localY + 1, gridSize - 1, gridSize - 1, cell->MapCell->IsSolid() ? BLUE : LIGHTGRAY);
+        }, viewSet);
 
-    Vector2 cameraInMapSpace = camera.GetMapPosition();
+    Vector2 cameraInMapSpace = viewSet.ViewCamera.GetMapPosition();
 
     auto currentCell = renderer.GetCell(cameraInMapSpace.x, cameraInMapSpace.y);
 
-    int localX = (int)(cameraInMapSpace.x * gridSize + posX);
-    int localY = (int)(cameraInMapSpace.y * gridSize + posY);
+    int localX = (int)(cameraInMapSpace.x * gridSize) + posX;
+    int localY = (int)(cameraInMapSpace.y * gridSize) + posY;
     DrawCircle(localX, localY, gridSize / 3.0f, GREEN);
 
-    const Camera& cam = camera.GetCamera();
+    const Camera& cam = viewSet.ViewCamera.GetCamera();
 
     Vector2 targetVec{ cam.target.x - cam.position.x,cam.target.z - cam.position.z };
     targetVec = Vector2Normalize(targetVec);
@@ -54,19 +54,19 @@ void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, 
 
     DrawLine(localX, localY, targetX, targetY, BLUE);
 
-    Vector2 posFOV = Vector2Rotate(targetVec, camera.GetFOVX() * 0.5f);
+    Vector2 posFOV = Vector2Rotate(targetVec, viewSet.ViewCamera.GetFOVX() * 0.5f);
     targetX = localX + (int)(posFOV.x * gridSize * 10);
     targetY = localY + (int)(posFOV.y * gridSize * 10);
     DrawLine(localX, localY, targetX, targetY, DARKGREEN);
 
-    posFOV = Vector2Rotate(targetVec, -camera.GetFOVX() * 0.5f);
+    posFOV = Vector2Rotate(targetVec, -viewSet.ViewCamera.GetFOVX() * 0.5f);
     targetX = localX + (int)(posFOV.x * gridSize * 10);
     targetY = localY + (int)(posFOV.y * gridSize * 10);
     DrawLine(localX, localY, targetX, targetY, DARKGREEN);
 
     if (debug)
     {
-        for (auto& ray : renderer.DrawnRays)
+        for (auto& ray : viewSet.DrawnRays)
         {
             RenderCell* cell = ray.Positive->Target;
 
@@ -87,7 +87,7 @@ void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, 
             }
         }
 
-        for (auto& ray : renderer.DrawnRays)
+        for (auto& ray : viewSet.DrawnRays)
         {
             RenderCell* cell = ray.Positive->Target;
 
@@ -119,12 +119,12 @@ void DrawMiniMap(int screenX, int screenY, int gridSize, MapRenderer& renderer, 
 	DrawTexturePro(VisMapTexture.texture,
 		Rectangle{ 0,0, (float)VisMapTexture.texture.width, (float)-VisMapTexture.texture.height },
 		Rectangle{ (float)screenX, (float)screenY, (float)VisMapTexture.texture.width, (float)VisMapTexture.texture.height },
-		zero, 0, WHITE);
+        zero, 0, Color{ 255, 255, 255, 200 });
 }
 
 RenderTexture MiniMapTexture = RenderTexture{ 0 };
 
-void DrawMiniMapZoomed(int screenX, int screenY, int gridSize, MapRenderer& renderer, const FPCamera& camera, bool debug)
+void DrawMiniMapZoomed(int screenX, int screenY, int gridSize, MapRenderer& renderer, MapVisibilitySet& viewSet, bool debug)
 {
     int posX = 0;
     int posY = 0;
@@ -139,12 +139,12 @@ void DrawMiniMapZoomed(int screenX, int screenY, int gridSize, MapRenderer& rend
     BeginTextureMode(MiniMapTexture);
     ClearBackground(DARKGRAY);
 
-    Vector2 mapCamera = { camera.GetCameraPosition().x / renderer.GetDrawScale(), camera.GetCameraPosition().z / renderer.GetDrawScale() };
+    Vector2 mapCamera = { viewSet.ViewCamera.GetCameraPosition().x / renderer.GetDrawScale(), viewSet.ViewCamera.GetCameraPosition().z / renderer.GetDrawScale() };
 
     int mapX = (int)std::floor(mapCamera.x);
     int mapY = (int)std::floor(mapCamera.y);
 
-    Camera cam = camera.GetCamera();
+    Camera cam = viewSet.ViewCamera.GetCamera();
 
     float centerX = miniMapWidth * 0.5f;
     float centerY = minMapHeight * 0.5f;
@@ -173,29 +173,24 @@ void DrawMiniMapZoomed(int screenX, int screenY, int gridSize, MapRenderer& rend
             Color color = transColor;
 
             if (cellPtr->MapCell->IsSolid())
-            {
-                if (cellPtr->hitCell)
-                    color = RED;
-                else
-                    color = BLUE;
-            }
+                color = BLUE;
             DrawRectangleF(posX + localOffset.x - 1 + centerX + gridOffset.x, posY + localOffset.y - 1 + centerY + gridOffset.y, gridSize - 1.0f, gridSize - 1.0f, color);
         }
     }
 
     DrawCircleF(posX + centerX, posY + centerY, gridSize / 6.0f, GREEN);
     DrawLineF(posX + centerX, posY + centerY, posX + centerX + (targetVec.x * gridSize), posY + centerY + (targetVec.y * gridSize), BLUE);
-    Vector2 posFOV = Vector2Scale(Vector2Rotate(targetVec, camera.GetFOVX() * 0.5f), gridSize * 3.0f);
+    Vector2 posFOV = Vector2Scale(Vector2Rotate(targetVec, viewSet.ViewCamera.GetFOVX() * 0.5f), gridSize * 3.0f);
     DrawLineF(posX + centerX, posY + centerY, posX + centerX + posFOV.x, posY + centerY + posFOV.y, GREEN);
 
-    Vector2 negFov = Vector2Scale(Vector2Rotate(targetVec, -camera.GetFOVX()* 0.5f), gridSize * 3.0f);
+    Vector2 negFov = Vector2Scale(Vector2Rotate(targetVec, -viewSet.ViewCamera.GetFOVX()* 0.5f), gridSize * 3.0f);
     DrawLineF(posX + centerX, posY + centerY, posX + centerX + negFov.x, posY + centerY + negFov.y, GREEN);
 
     int dataFontSize = 20;
 
     // draw current cell data
 
-    // postion
+    // position
     DrawText(TextFormat("X:%d Y:%d", mapX, mapY),0,minMapHeight- dataFontSize, dataFontSize,RAYWHITE);
 
     // height info

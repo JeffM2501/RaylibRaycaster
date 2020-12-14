@@ -261,3 +261,56 @@ void GridMap::DoForEachCell(std::function<void(GridCell* cell)> func)
 		func(&cell);
 	}
 }
+
+bool GridMap::PointInCell(Vector2& postion, float radius, GridCell* cell)
+{
+	if (cell == nullptr)
+		return true;
+
+	if (!cell->IsSolid())
+		return false;
+
+	float minX = cell->Position.x - radius;
+	float maxX = cell->Position.x + 1 + radius;
+	float minY = cell->Position.y - radius;
+	float maxY = cell->Position.y + 1 + radius;
+
+	if (postion.x < minX || postion.x > maxX)
+		return false;
+
+	if (postion.y < minY || postion.y > maxY)
+		return false;
+	return true;
+}
+
+bool GridMap::CollideWithMap(Vector2&& postion, float radius)
+{
+	int mapX = (int)std::floor(postion.x);
+	int mapY = (int)std::floor(postion.y);
+
+	auto ptr = GetCell(mapX, mapY);
+
+	if (PointInCell(postion, radius, ptr))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX + 1, mapY)))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX - 1, mapY)))
+		return true;
+
+	if (PointInCell(postion, radius, GetCell(mapX, mapY + 1)))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX + 1, mapY + 1)))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX - 1, mapY + 1)))
+		return true;
+
+	if (PointInCell(postion, radius, GetCell(mapX, mapY - 1)))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX + 1, mapY - 1)))
+		return true;
+	if (PointInCell(postion, radius, GetCell(mapX - 1, mapY - 1)))
+		return true;
+
+	return false;
+}
+

@@ -178,7 +178,7 @@ float FPCamera::GetFOVX() const
 
 Vector2 FPCamera::GetMapPosition() const
 {
-    return Vector2{ std::floor(CameraPosition.x / ViewScale), std::floor(CameraPosition.z / ViewScale) };
+    return Vector2{ CameraPosition.x / ViewScale, CameraPosition.z / ViewScale };
 }
 
 Vector3 FPCamera::GetCameraPosition() const

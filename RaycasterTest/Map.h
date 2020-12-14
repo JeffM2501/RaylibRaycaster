@@ -63,6 +63,9 @@ public:
 
 	void DoForEachCell(std::function<void(GridCell* cell)> func);
 
+	bool PointInCell(Vector2& postion, float radius, GridCell* cell);
+	bool CollideWithMap(Vector2&& postion, float radius);
+
 	typedef std::function<void(size_t id, const std::string& path)> MaterialFunction;
 	MaterialFunction MaterialAdded;
 

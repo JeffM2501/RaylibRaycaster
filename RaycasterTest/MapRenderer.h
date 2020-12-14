@@ -11,6 +11,7 @@
 
 #include "Map.h"
 #include "FaceGeometry.h"
+#include "FPCamera.h"
 
 class RenderFace
 {
@@ -19,17 +20,11 @@ public:
     size_t  FaceMaterial;
 };
 
-
 class RenderCell
 {
 public:
     std::vector<RenderFace> RenderFaces;
     GridCell* MapCell;
-    Rectangle Bounds;
-
-    bool checkedForHit;
-    bool hitCell;
-    bool currentCell;
 
     float GetFloorValue()
     {
@@ -73,6 +68,26 @@ public:
     }
 };
 
+class MapVisibilitySet
+{
+public:
+    FPCamera& ViewCamera;
+	std::deque<RaySet> PendingRayCasts;
+	std::map<int, RenderCell*> VisibleCells;
+	std::map<size_t, std::vector<RenderFace*>> FacesToDraw;
+    
+    std::vector<RaySet> DrawnRays;
+
+    bool TrackDrwnRays = false;
+
+	bool DrawEverything = false;
+
+	int DrawnCells = 0;
+	int DrawnFaces = 0;
+
+    MapVisibilitySet(FPCamera& camera) : ViewCamera(camera) {}
+};
+
 class MapRenderer
 {
 public:
@@ -82,6 +97,8 @@ public:
     void Setup(GridMap::Ptr map, float scale);
     void CleanUp();
 
+    Vector2 ToMapPos(Vector3& postion);
+
     inline float GetDrawScale() { return DrawScale; }
 
     RenderCell* GetCell(int x, int y);
@@ -90,19 +107,15 @@ public:
     RenderCell* GetCell(int index);
     RenderCell* GetDirectionCell(RenderCell* sourceCell, Directions dir);
 
-    void DoForEachCell(std::function<void(RenderCell* cell)> func, bool visible = false);
+    void DoForEachCell(std::function<void(RenderCell* cell)> func);
+    void DoForEachVisibleCell(std::function<void(RenderCell* cell)> func, MapVisibilitySet& viewSet);
 
-    void ComputeVisibility(const Camera& camera, float fovX);
-    void Draw();
+    void ComputeVisibility(MapVisibilitySet& viewSet);
+    void Draw(MapVisibilitySet& viewSet);
+    
 
+	void BuildCellGeo(RenderCell* cell);
     size_t SetupTexture(size_t textureID) const;
-
-    bool CollideWithMap(Vector3& postion, float radius);
-
-    bool DrawEverything = false;
-
-    int DrawnCells = 0;
-    int DrawnFaces = 0;
 
     typedef std::vector<RenderCell> RenderCellVec;
     typedef std::vector<RenderCell>::iterator RenderCellVecItr;
@@ -110,31 +123,20 @@ public:
 
     GridMap::Ptr MapPointer;
 
-    std::vector<RaySet> DrawnRays;
-
-    void BuildCellGeo(RenderCell* cell);
 
 private:
-    bool PointInCell(Vector2& postion, float radius, RenderCell* cellPtr);
+    void CastRays(Vector2& origin, MapVisibilitySet& viewSet);
+    void GetTarget(RayCast::Ptr ray, Vector2& origin, MapVisibilitySet& viewSet);
 
-    void CastRays(Vector2& origin);
-    void GetTarget(RayCast::Ptr ray, Vector2& origin);
-
-    void AddVisCell(RenderCell* cell);
+    void AddVisCell(RenderCell* cell, MapVisibilitySet& viewSet);
 
     RenderFace MakeFace(Directions dir, CellParams* params, size_t material);
 
-    void DrawCell(RenderCell* cell);
-    void DrawFaces();
+    void DrawCell(RenderCell* cell, MapVisibilitySet& viewSet);
+    void DrawFaces(MapVisibilitySet& viewSet);
 
     float DrawScale = 1.0f;
     float RayAngleLimit = 1.0;
 
     std::map<Directions, Color> DirectionColors;
-
-    std::deque<RaySet> PendingRayCasts;
-
-    std::map<int, RenderCell*> VisibleCells;
-
-    std::map<size_t, std::vector<RenderFace*>> FacesToDraw;
 };

@@ -41,6 +41,8 @@ protected:
     GridMap::Ptr Map;
     MapRenderer Renderer;
     FPCamera ViewCamera;
+    MapVisibilitySet MainCameraViewSet;
+
 
     Texture BackgroundImage;
 
@@ -56,7 +58,7 @@ void Run()
 }
 
 
-Application::Application()
+Application::Application() :MainCameraViewSet(ViewCamera)
 {
 
 }
@@ -142,7 +144,7 @@ bool Application::CheckMapPos(FPCamera& camera, Vector3& newPostion, const Vecto
         floor = cell->MapCell->Floor / 16.0f;
     }
 
-    if (Renderer.CollideWithMap(newPostion, 0.1f))
+    if (Map->CollideWithMap(Vector2{newPostion.x, newPostion.z}, 0.1f))
     {
         newPostion = oldPostion;
         return false;
@@ -186,7 +188,7 @@ bool Application::Update()
 void Application::UpdateInput()
 {
     if (IsKeyPressed(KEY_F10))
-        Renderer.DrawEverything = !Renderer.DrawEverything;
+        MainCameraViewSet.DrawEverything = !MainCameraViewSet.DrawEverything;
 
   //  ViewCamera.UseMouseX = ViewCamera.UseMouseY = IsMouseButtonDown(1);
     ViewCamera.Update();
@@ -235,8 +237,8 @@ void Application::Draw3D()
     frameTime = GetTime();
     BeginMode3D(ViewCamera.GetCamera());
 
-    Renderer.ComputeVisibility(ViewCamera.GetCamera(), ViewCamera.GetFOVX());
-    Renderer.Draw();
+    Renderer.ComputeVisibility(MainCameraViewSet);
+    Renderer.Draw(MainCameraViewSet);
 
     DrawGizmo(Vector3{ 2 * Renderer.GetDrawScale(), 0.1f * Renderer.GetDrawScale(), 2 * Renderer.GetDrawScale() });
     EndMode3D();
@@ -251,13 +253,14 @@ void Application::DrawHUD()
 
 	DrawVector3Text(&pos, WindowSize.x - 10, WindowSize.y - 30, true);
 
-	DrawVector2Text(&ViewCamera.GetViewAngles(), WindowSize.x - 10, WindowSize.y - 50, true);
+    Vector2 angles = ViewCamera.GetViewAngles();
+	DrawVector2Text(&angles, WindowSize.x - 10, WindowSize.y - 50, true);
 
-	const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)Renderer.DrawnCells / (double)Renderer.MapPointer->GetCellCount()) * 100.0, Renderer.DrawnFaces, frameTime * 1000);
+	const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)MainCameraViewSet.DrawnCells / (double)Map->GetCellCount()) * 100.0, MainCameraViewSet.DrawnFaces, frameTime * 1000);
 	DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
 
-	DrawMiniMap(0, 0, 8, Renderer, ViewCamera);
-	DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, ViewCamera);
+	DrawMiniMap(0, 0, 8, Renderer, MainCameraViewSet);
+	DrawMiniMapZoomed(WindowSize.x - (5 * 25), 0, 25, Renderer, MainCameraViewSet);
 
     if (MapEditor::CanUndo())
         DrawText("Undo", GetScreenWidth() / 2, 0, 20, RED);

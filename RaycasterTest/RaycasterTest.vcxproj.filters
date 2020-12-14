@@ -13,6 +13,18 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Map">
+      <UniqueIdentifier>{63af9580-6428-4ada-9ccd-b2b0e43ed39c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Map\Edtor">
+      <UniqueIdentifier>{11939107-13d3-4328-93ce-2d71edf8bc91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Services">
+      <UniqueIdentifier>{d7cc219c-9026-4d67-afe8-8f1104df4171}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Map">
+      <UniqueIdentifier>{88c94435-ec26-4470-b8a3-a35f95595aca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -27,9 +39,6 @@
     <ClInclude Include="RaycasterTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Map.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ResourceManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,33 +51,27 @@
     <ClInclude Include="HudWidgets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MapRenderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EditorGui.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MaterialManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Map.h">
+      <Filter>Header Files\Map</Filter>
+    </ClInclude>
     <ClInclude Include="MapEditorService.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="MapRenderer.h">
+      <Filter>Header Files\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorGui.h">
+      <Filter>Header Files\Map</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RaycasterTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ResourceManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Map.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MapRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HudWidgets.cpp">
@@ -77,14 +80,23 @@
     <ClCompile Include="FPCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EditorGui.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Map.cpp">
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
-    <ClCompile Include="MaterialManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="MapRenderer.cpp">
+      <Filter>Source Files\Map</Filter>
     </ClCompile>
     <ClCompile Include="MapEditorService.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Map\Edtor</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceManager.cpp">
+      <Filter>Source Files\Services</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialManager.cpp">
+      <Filter>Source Files\Services</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorGui.cpp">
+      <Filter>Source Files\Map\Edtor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
