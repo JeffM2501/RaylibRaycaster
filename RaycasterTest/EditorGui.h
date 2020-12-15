@@ -8,9 +8,9 @@
 class EditorGui
 {
 public:
-	EditorGui(MapRenderer& renderer, FPCamera& camera);
+	EditorGui(MapRenderer& renderer);
 
-	void Draw();
+	void Show();
 
     enum class EditorModes
     {
@@ -20,14 +20,38 @@ public:
 
     EditorModes EditViewMode = EditorModes::FPView;
 
-    void DrawMapMode();
+    void DrawMapMode(MapVisibilitySet& viewSet);
 
     void Check3DViewPick(MapVisibilitySet& viewSet);
+
+    int ToolbarHeight = 34;
 
 protected:
 	void ShowToolbar();
 
+    void SetViewMode(EditorModes mode);
+
+    void HandleDrag();
+    void HandleSelection();
+    void DrawMap();
+    void DrawSelection(MapVisibilitySet& viewSet);
+
+    bool ValidClickPoint(const Vector2& position) const;
+    Vector2 MouseToMap(Vector2 position) const;
+    std::vector<int> GetCellsInRect(const Vector2& min, const Vector2& max);
+
 private:
 	MapRenderer& Renderer;
-	FPCamera& ViewCamera;
+
+    int MapGridSize = 25;
+	
+    Camera2D MapViewCamera;
+    int ZoomTicks = 3;
+    float ZoomLevels[7] = { 4, 2, 1.5f, 1, 0.5f, 0.25f, 0.125f };
+
+    bool InPanDrag = false;
+    bool InSelectDrag = false;
+    Vector2 LastDragPos{ 0, 0 };
+
+    std::vector<int> HoverSelectCells;
 };

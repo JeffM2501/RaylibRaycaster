@@ -25,6 +25,7 @@ namespace MapEditor
 
 	// selections
 	void SelectCell(int index, bool add = false);
+	void SelectCells(std::vector<int> indexes, bool add = false);
 	void SelectCellFace(int index, Directions dir, bool add = false);
 	void ClearCellSelections();
 	void ClearFaceSelections();

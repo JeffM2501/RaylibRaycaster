@@ -106,7 +106,7 @@ void Setup()
 
     BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
 
-    Editor = std::make_shared<EditorGui>(Renderer, ViewCamera);
+    Editor = std::make_shared<EditorGui>(Renderer);
 }
 
 void UpdateInput()
@@ -163,33 +163,33 @@ void Draw3D()
     Renderer.ComputeVisibility(MainCameraViewSet);
     Renderer.Draw(MainCameraViewSet);
 
-    if (Editor != nullptr)
-        Editor->Check3DViewPick(MainCameraViewSet);
+     if (Editor != nullptr)
+         Editor->Check3DViewPick(MainCameraViewSet);
   
     DrawGizmo(Vector3{ 2 * Renderer.GetDrawScale(), 0.1f * Renderer.GetDrawScale(), 2 * Renderer.GetDrawScale() });
-
-    if (Editor != nullptr)
-    {
-        constexpr Color HighlightColor = { 255,64,64,255 };
-        rlDisableDepthTest();
-        rlDisableDepthMask();
-        // draw any selected cells
-        for (auto cellIndex : MapEditor::GetSelectedCells())
-        {
-            auto cell = Renderer.GetCell(cellIndex);
-            for (auto f : cell->RenderFaces)
-            {
-                Material mat = MaterialManager::GetRuntimeMaterial(f.FaceMaterial);
-                Color ogColor = mat.maps[MAP_DIFFUSE].color;
-                mat.maps[MAP_DIFFUSE].color = HighlightColor;
-                rlDrawMesh(f.FaceMesh, mat, MatrixIdentity());
-                mat.maps[MAP_DIFFUSE].color = ogColor;
-            }
-        }
-
-        rlEnableDepthMask();
-        rlEnableDepthTest();
-    }
+ 
+     if (Editor != nullptr)
+     {
+         constexpr Color HighlightColor = { 255,64,64,255 };
+       //  rlDisableDepthTest();
+         rlDisableDepthMask();
+         // draw any selected cells
+         for (auto cellIndex : MapEditor::GetSelectedCells())
+         {
+             auto cell = Renderer.GetCell(cellIndex);
+             for (auto f : cell->RenderFaces)
+             {
+                 Material mat = MaterialManager::GetRuntimeMaterial(f.FaceMaterial);
+                 Color ogColor = mat.maps[MAP_DIFFUSE].color;
+                 mat.maps[MAP_DIFFUSE].color = HighlightColor;
+                 rlDrawMesh(f.FaceMesh, mat, MatrixIdentity());
+                 mat.maps[MAP_DIFFUSE].color = ogColor;
+             }
+         }
+ 
+         rlEnableDepthMask();
+     //    rlEnableDepthTest();
+     }
     EndMode3D();
     frameTime = GetTime() - frameTime;
 }
@@ -197,34 +197,18 @@ void Draw3D()
 void DrawHUD()
 {
     int toolbarSize = 35;
-    DrawFPS(10, WindowSize.y - 30);
+    DrawFPS(10, WindowSize.y - 145);
 
 	Vector3 pos = ViewCamera.GetCameraPosition();
 
-	DrawVector3Text(&pos, WindowSize.x - 10, WindowSize.y - 30, true);
-
-    Vector2 angles = ViewCamera.GetViewAngles();
-	DrawVector2Text(&angles, WindowSize.x - 10, WindowSize.y - 50, true);
-
-	const char* text = TextFormat("Cell%%:%.2f,Face Count:%d,Draw Time(ms):%f", ((double)MainCameraViewSet.DrawnCells / (double)Map->GetCellCount()) * 100.0, MainCameraViewSet.DrawnFaces, frameTime * 1000);
-	DrawText(text, WindowSize.x / 2 - 200, WindowSize.y - 30, 20, LIME);
-
 	DrawMiniMap(0, toolbarSize, 8, Renderer, MainCameraViewSet);
-	DrawMiniMapZoomed(WindowSize.x - (5 * 25), toolbarSize, 25, Renderer, MainCameraViewSet);
-
-    if (MapEditor::CanUndo())
-        DrawText("Undo", GetScreenWidth() / 2, toolbarSize, 20, RED);
-	if (MapEditor::CanRedo())
-		DrawText("Redo", GetScreenWidth() / 2, toolbarSize+20, 20, RED);
-
-	if (SelectedCells.size() > 0)
-		DrawText(TextFormat("Selected %d", SelectedCells[0]), GetScreenWidth() / 2, toolbarSize+40, 20, RED);
+	DrawMiniMapZoomed(0, GetScreenHeight()-125, 25, Renderer, MainCameraViewSet);
 }
 
 void DrawEditorGUI()
 {
     if (Editor != nullptr)
-        Editor->Draw();
+        Editor->Show();
 }
 
 bool Update()
@@ -242,17 +226,16 @@ bool Update()
     {
         UpdateInput();
 
-        BeginDrawing();
         ClearBackground(BLACK);
-
-        if (Editor != nullptr || Editor->EditViewMode == EditorGui::EditorModes::FPView)
+        BeginDrawing();
+        if (Editor != nullptr && Editor->EditViewMode == EditorGui::EditorModes::FPView)
         {
             Draw3D();
             DrawHUD();
         }
         else
         {
-            Editor->DrawMapMode();
+        Editor->DrawMapMode(MainCameraViewSet);
         }
 
         DrawEditorGUI();

@@ -233,6 +233,18 @@ namespace MapEditor
 			SelectedCells.push_back(index);
 	}
 
+	void SelectCells(std::vector<int> indexes, bool add)
+	{
+        if (!add)
+            ClearCellSelections();
+
+		for (auto index : indexes)
+		{
+            if (!CellIsSelected(index))
+                SelectedCells.push_back(index);
+		}
+	}
+
 	void SelectCellFace(int index, Directions dir, bool add)
 	{
         if (!add)
@@ -331,11 +343,54 @@ namespace MapEditor
 		}
 	};
 
+	void AddCellHeightChange(SetCellHeight::Ptr command, GridCell* cell, uint8_t floor, uint8_t ceiling)
+	{
+       
+	}
+
+	bool DoForeachSelectedCell(GridCell* cell, std::function<void(GridCell*)> func)
+	{
+		if (func == nullptr || MapPointer == nullptr)
+			return false;
+
+		if (cell != nullptr)
+			func(cell);
+		else
+		{
+			if (SelectedCells.size() == 0)
+				return false;
+			for (auto index : SelectedCells)
+			{
+				GridCell* c = MapPointer->GetCell(index);
+				if (c != nullptr)
+					func(c);
+			}
+		}
+
+		return true;
+	}
+
 	void SetCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling)
 	{
 		SetCellHeight::Ptr command = SetCellHeight::Create();
-		command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cell->Index, floor));
-		command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cell->Index, ceiling));
+
+		if (DoForeachSelectedCell(cell, [command, floor, ceiling](GridCell* cellptr)
+			{
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, floor));
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, ceiling));
+			}))
 		PushEdit(command);
+	}
+
+	void IncrementCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling)
+	{
+        SetCellHeight::Ptr command = SetCellHeight::Create();
+
+        if (DoForeachSelectedCell(cell, [command, floor, ceiling](GridCell* cellptr)
+            {
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, cellptr->Floor + floor));
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, cellptr->Ceiling + ceiling));
+            }))
+        PushEdit(command);
 	}
 }
