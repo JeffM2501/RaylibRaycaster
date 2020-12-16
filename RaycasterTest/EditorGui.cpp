@@ -5,14 +5,73 @@
 #include "MapPicker.h"
 #include "MapRenderer.h"
 
+#define GUI_PROPERTY_LIST_IMPLEMENTATION
+#include "PropertyList.h"
+
+std::function<void(void)> ActivePopupFunction;
+std::string ActivePopup;
+
+void OpenPopup(const std::string& popup)
+{
+    if (ActivePopup.empty())
+        ActivePopup = popup;
+}
+
+bool ShowPopup(const std::string& popup, std::function<void(void)> func)
+{
+    if (ActivePopup == popup)
+    {
+        ActivePopupFunction = func;
+        return true;
+    }
+    
+    return false; 
+}
+
+void ClosePopup()
+{
+    ActivePopup.clear();
+    ActivePopupFunction = nullptr;
+}
+
+bool PopupActive()
+{
+    return !ActivePopup.empty();
+}
+
+void EndPopup()
+{
+    GuiLock();
+}
+
+void ApplyPopup()
+{
+    if (PopupActive())
+    {
+        GuiUnlock();
+        ActivePopupFunction();
+        GuiLock();
+    }
+}
+
 bool ShiftIsDown()
 {
     return IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
 }
 
+bool ConditionalButton(Rectangle rect, const char* text, bool enabled)
+{
+    if (enabled)
+        return GuiButton(rect, text);
+
+    GuiDummyRec(rect, text);
+    return false;
+}
+
 EditorGui::EditorGui(MapRenderer& renderer) : Renderer(renderer)
 {
 	GuiLoadStyle(ResourceManager::GetAssetPath("editor/themes/ashes.rgs").c_str());
+
     MapViewCamera.offset = Vector2{ 0, (float)ToolbarHeight };
     MapViewCamera.rotation = 0;
     MapViewCamera.target = Vector2{ 0,0 };
@@ -38,27 +97,14 @@ void EditorGui::ShowToolbar()
 
     Rectangle buttonRect{ headerOffset, 2, 30, 30 };
     // undo/redo
-    if (MapEditor::CanUndo())
-    {
-        if (GuiButton(buttonRect, GuiIconText(RICON_UNDO_FILL, nullptr)))
-            MapEditor::Undo();
-    }
-    else
-    {
-        GuiDummyRec(buttonRect, GuiIconText(RICON_UNDO_FILL, nullptr));
-    }
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_UNDO_FILL, nullptr), MapEditor::CanUndo()))
+         MapEditor::Undo();
+ 
     headerOffset += 32;
 
     buttonRect.x = headerOffset;
-    if (MapEditor::CanRedo())
-    {
-        if (GuiButton(buttonRect, GuiIconText(RICON_REDO_FILL, nullptr)))
-            MapEditor::Redo();
-    }
-    else
-    {
-        GuiDummyRec(buttonRect, GuiIconText(RICON_REDO_FILL, nullptr));
-    }
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_REDO_FILL, nullptr), MapEditor::CanRedo()))
+        MapEditor::Redo();
 
     // view modes
     if (GuiToggle(Rectangle{ middle + 2, 2, 30, 30 }, GuiIconText(RICON_MODE_3D, nullptr), EditViewMode == EditorModes::FPView))
@@ -72,11 +118,259 @@ void EditorGui::ShowToolbar()
         MapViewCamera.offset.x = 0;
         MapViewCamera.offset.y = (float)ToolbarHeight;
     }
+}
 
-    if (GuiButton(Rectangle{ middle + 64, 2, 70, 30 }, "Test"))
+void EditorGui::ShowSidebar()
+{
+    float xStartPos = (float)GetScreenWidth() - SidebarWidth;
+    float height = (float)GetScreenHeight() - ToolbarHeight;
+    GuiPanel(Rectangle{ xStartPos, (float)ToolbarHeight, (float)SidebarWidth, height });
+
+    // tabs
+    float headerOffset = xStartPos + 2;
+    if (GuiToggle(Rectangle{ headerOffset, ToolbarHeight,60,30 }, GuiIconText(RICON_TARGET_MOVE_FILL, "Edit"), ActiveTab == ActiveTabs::Edit))
+        ActiveTab = ActiveTabs::Edit;
+    headerOffset += 62;
+    if (GuiToggle(Rectangle{ headerOffset, ToolbarHeight,60,30 }, GuiIconText(RICON_BRUSH_PAINTER, "Paint"), ActiveTab == ActiveTabs::Paint))
+        ActiveTab = ActiveTabs::Paint;
+    headerOffset += 62;
+    if (GuiToggle(Rectangle{ headerOffset, ToolbarHeight,70,30 }, GuiIconText(RICON_PLAYER, "Items"), ActiveTab == ActiveTabs::Items))
+        ActiveTab = ActiveTabs::Items;
+    headerOffset += 72;
+
+    float yOffset = ToolbarHeight + 32;
+    headerOffset = 4;
+    Rectangle bounds{ xStartPos + 2, yOffset, SidebarWidth - 2, (float)GetScreenHeight() - yOffset - 2 };
+    GuiPanel(bounds);
+    
+    switch (ActiveTab)
     {
-        MapEditor::IncrementCellHeights(nullptr, -1, +1);
+    case EditorGui::ActiveTabs::Edit:
+        ShowEditPanel(bounds);
+        break;
+    case EditorGui::ActiveTabs::Paint:
+        ShowPaintPanel(bounds);
+        break;
+    case EditorGui::ActiveTabs::Items:
+        ShowItemPanel(bounds);
+        break;
+    default:
+        break;
     }
+}
+
+enum class SelectionSolidTypes
+{
+    Solid,
+    Open,
+    Mixed,
+};
+
+void EditorGui::ShowEditPanel(const Rectangle& bounds)
+{
+    auto selectedCells = MapEditor::GetSelectedCells();
+    bool selectionValid = selectedCells.size() > 0;
+
+    float selectedFloorHeight = -1;
+    float selectedCeilingHeight = -1;
+
+    SelectionSolidTypes selectionSolidType = SelectionSolidTypes::Mixed;
+
+    
+    if (selectionValid)
+    {
+        bool isSolid = Renderer.GetCell(selectedCells[0])->MapCell->IsSolid();
+
+        selectionSolidType = isSolid ? SelectionSolidTypes::Solid: SelectionSolidTypes::Open;;
+
+        for (int index : selectedCells)
+        {
+            auto cell = Renderer.GetCell(index);
+
+            if (cell->MapCell->IsSolid() != isSolid)
+                selectionSolidType = SelectionSolidTypes::Mixed;
+
+            float f = cell->GetFloorValue();
+            float c = cell->GetCeilingValue();
+
+            if (selectedFloorHeight < 0)
+                selectedFloorHeight = f;
+            else if (selectedFloorHeight != f)
+            {
+                selectedFloorHeight = -1;
+                selectedCeilingHeight = -1;
+                break;
+            }
+
+            if (selectedCeilingHeight < 0)
+                selectedCeilingHeight = c;
+            else if (selectedCeilingHeight != c)
+            {
+                selectedFloorHeight = -1;
+                selectedCeilingHeight = -1;
+                break;
+            }
+        }
+    }
+
+    float headerOffset = bounds.x+2;
+    float yOffset = bounds.y + 2;
+
+    Rectangle buttonRect{ headerOffset, yOffset, 60, 30 };
+
+    GuiLabel(buttonRect, "Floor");
+    buttonRect.x += 62;
+    buttonRect.width = 30;
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_BOTTOM_FILL, nullptr), selectionValid))
+    {
+        MapEditor::IncrementCellHeights(nullptr, -1, 1);
+    }
+
+    buttonRect.x += 32;
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_TOP_FILL, nullptr), selectionValid))
+    {
+        MapEditor::IncrementCellHeights(nullptr, 1, -1);
+    }
+    buttonRect.x += 34;
+    buttonRect.width = 60;
+
+    if (selectionValid)
+    {
+        if (GuiButton(buttonRect, selectedFloorHeight < 0 ? "..." : TextFormat("%.3f", selectedFloorHeight)))
+            OpenPopup("floordepth");
+    }
+    
+    ShowPopup("floordepth",[this, selectedFloorHeight, buttonRect]()
+        {
+            Rectangle windowRect = { buttonRect.x + buttonRect.width - 200, buttonRect.y, 200, 64 };
+            if (!GuiWindowBox(windowRect, "Set Floor Height"))
+            {
+                Rectangle sliderRect = { windowRect.x + 50,windowRect.y+30,windowRect.width-100,30 };
+
+                float oldVal = selectedFloorHeight;
+                if (oldVal < 0)
+                    oldVal = Renderer.GetCell(MapEditor::GetSelectedCells()[0])->GetFloorValue();
+ 
+                float newValue = GuiSlider(sliderRect, "Height", TextFormat("%.2f", oldVal), oldVal, 0, 255 / 16.0f);
+                if (newValue != oldVal)
+                    MapEditor::SetCellFloors(nullptr, (uint8_t)(newValue * 16));
+            }
+            else
+            {
+                ClosePopup();
+            }
+            EndPopup();
+        });
+
+    yOffset += 32;
+    buttonRect = { headerOffset, yOffset, 60, 30 };
+    GuiLabel(buttonRect, "Ceiling");
+    buttonRect.x += 62;
+    buttonRect.width = 30;
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_BOTTOM_FILL, nullptr), selectionValid))
+    {
+        MapEditor::IncrementCellHeights(nullptr, 0, -1);
+    }
+
+    buttonRect.x += 32;
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_TOP_FILL, nullptr), selectionValid))
+    {
+        MapEditor::IncrementCellHeights(nullptr, 0, 1);
+    }
+    buttonRect.x += 34;
+    buttonRect.width = 60;
+
+    if (selectionValid)
+    {
+        if (GuiButton(buttonRect, selectedCeilingHeight < 0 ? "..." : TextFormat("%.3f", selectedCeilingHeight)))
+            OpenPopup("ceilingdepth");
+    }
+
+    ShowPopup("ceilingdepth", [this, selectedFloorHeight, selectedCeilingHeight, buttonRect]()
+        {
+            Rectangle windowRect = { buttonRect.x + buttonRect.width - 200, buttonRect.y, 200, 64 };
+            if (!GuiWindowBox(windowRect, "Set Ceiling Height"))
+            {
+                Rectangle sliderRect = { windowRect.x + 50,windowRect.y + 30,windowRect.width - 100,30 };
+
+                float oldFloor = selectedFloorHeight;
+                if (oldFloor < 0)
+                    oldFloor = Renderer.GetCell(MapEditor::GetSelectedCells()[0])->GetFloorValue();
+
+                float oldVal = selectedCeilingHeight;
+                if (oldVal < 0)
+                    oldVal = Renderer.GetCell(MapEditor::GetSelectedCells()[0])->GetCeilingValue();
+
+                oldVal = oldVal - oldFloor;
+
+                float newValue = GuiSlider(sliderRect, "Height", TextFormat("%.2f", oldVal), oldVal, 0, 255 / 16.0f);
+                if (newValue != oldVal)
+                    MapEditor::SetCellCeilings(nullptr, (uint8_t)(newValue * 16));
+            }
+            else
+            {
+                ClosePopup();
+            }
+            EndPopup();
+        });
+
+    // solid/open state
+    yOffset += 34;
+    buttonRect = { headerOffset, yOffset, 30, 30 };
+
+    // checkbox
+    if (selectionSolidType == SelectionSolidTypes::Mixed)
+    {
+        GuiLabel(buttonRect, "...");
+    }
+    else
+    {
+        bool checked = GuiCheckBox(buttonRect, "Solid", selectionSolidType == SelectionSolidTypes::Solid);
+        if (checked != (selectionSolidType == SelectionSolidTypes::Solid))
+        {
+            MapEditor::SetCellSolid(nullptr, checked);
+        }
+    }
+
+    yOffset += 34;
+    buttonRect = { headerOffset, yOffset, 30, 30 };
+    
+    GuiEnableTooltip();
+    // paint tools
+
+
+    GuiSetTooltip("No Paint");
+    if (GuiToggle(buttonRect, GuiIconText(RICON_ZOOM_CENTER, nullptr), PaintToolMode == PaintToolModes::None))
+    {
+        PaintToolMode = PaintToolModes::None;
+    }
+    buttonRect.x += 32;
+
+    GuiSetTooltip("Paint Solid");
+    if (GuiToggle(buttonRect, GuiIconText(RICON_ZOOM_ALL, nullptr), PaintToolMode == PaintToolModes::Solid))
+    {
+        PaintToolMode = PaintToolModes::Solid;
+    }
+    buttonRect.x += 32;
+
+    GuiSetTooltip("Paint Solid");
+    if (GuiToggle(buttonRect, GuiIconText(RICON_BOX_DOTS_BIG, nullptr), PaintToolMode == PaintToolModes::Open))
+    {
+        PaintToolMode = PaintToolModes::Open;
+    }
+
+    GuiClearTooltip();
+    GuiDisableTooltip();
+}
+
+void EditorGui::ShowPaintPanel(const Rectangle& bounds)
+{
+    bool selectionValid = MapEditor::GetSelectedCells().size() > 0;
+}
+
+void EditorGui::ShowItemPanel(const Rectangle& bounds)
+{
+
 }
 
 void EditorGui::SetViewMode(EditorModes mode)
@@ -90,12 +384,20 @@ void EditorGui::SetViewMode(EditorModes mode)
 
 void EditorGui::Show()
 {
+    if (PopupActive())
+        GuiLock();
+
     ShowToolbar();
+    ShowSidebar();
+
+    ApplyPopup();
+
+    GuiUnlock();
 }
 
 bool EditorGui::ValidClickPoint(const Vector2& position) const
 {
-    return position.y >= ToolbarHeight;
+    return position.y >= ToolbarHeight && position.x <= (GetScreenWidth() - SidebarWidth);
 }
 
 void EditorGui::HandleDrag()
@@ -153,7 +455,7 @@ Vector2 EditorGui::MouseToMap(Vector2 position) const
     return position;
 }
 
-std::vector<int>  EditorGui::GetCellsInRect(const Vector2& min, const Vector2& max)
+std::vector<int> EditorGui::GetCellsInRect(const Vector2& min, const Vector2& max)
 {
     std::vector<int> cells;
 
@@ -177,40 +479,60 @@ void EditorGui::HandleSelection()
 
     if (InPanDrag)
     {
-       
         InSelectDrag = false;
         return;
     }
 
     Vector2 mousePos = GetMousePosition();
 
-    if (InSelectDrag)
+    if (PaintToolMode == PaintToolModes::None)
     {
-        Vector2 p1 = MouseToMap(LastDragPos);
-        Vector2 p2 = MouseToMap(mousePos);
-
-        Vector2 min = { std::min(p1.x,p2.x),std::min(p1.y,p2.y) };
-        Vector2 max = { std::max(p1.x,p2.x),std::max(p1.y,p2.y) };
-
-        std::vector<int> cells = GetCellsInRect(min, max);
-
-        if (!IsMouseButtonDown(0))
+        if (InSelectDrag)
         {
-            MapEditor::SelectCells(cells, ShiftIsDown());
-            InSelectDrag = false;
+            Vector2 p1 = MouseToMap(LastDragPos);
+            Vector2 p2 = MouseToMap(mousePos);
+
+            Vector2 min = { std::min(p1.x,p2.x),std::min(p1.y,p2.y) };
+            Vector2 max = { std::max(p1.x,p2.x),std::max(p1.y,p2.y) };
+
+            std::vector<int> cells = GetCellsInRect(min, max);
+
+            if (!IsMouseButtonDown(0))
+            {
+                MapEditor::SelectCells(cells, ShiftIsDown());
+                InSelectDrag = false;
+            }
+            else
+            {
+                HoverSelectCells = cells;
+            }
         }
         else
         {
-            HoverSelectCells = cells;
+            if (IsMouseButtonDown(0) && ValidClickPoint(mousePos))
+            {
+                InSelectDrag = true;
+                LastDragPos = mousePos;
+            }
         }
     }
-    else
+    else if (PaintToolMode == PaintToolModes::Solid && IsMouseButtonDown(0))
     {
-        if (IsMouseButtonDown(0) && ValidClickPoint(mousePos))
-        {
-            InSelectDrag = true;
-            LastDragPos = mousePos;
-        }
+        Vector2 cellPos = MouseToMap(mousePos);
+        auto cell = Renderer.GetCell(cellPos.x,cellPos.y);
+        if (cell == nullptr)
+            return;
+
+        MapEditor::SetCellSolid(cell->MapCell, true);
+    }
+    else if (PaintToolMode == PaintToolModes::Open && IsMouseButtonDown(0))
+    {
+        Vector2 cellPos = MouseToMap(mousePos);
+        auto cell = Renderer.GetCell(cellPos.x, cellPos.y);
+        if (cell == nullptr)
+            return;
+
+        MapEditor::SetCellSolid(cell->MapCell, false);
     }
 }
 
@@ -298,7 +620,7 @@ void EditorGui::Check3DViewPick(MapVisibilitySet& viewSet)
 
     auto pos = GetMousePosition();
 
-    if (pos.y < ToolbarHeight)
+    if (!ValidClickPoint(pos))
         return;
 
     // check for picking

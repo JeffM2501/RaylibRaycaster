@@ -20,14 +20,26 @@ public:
 
     EditorModes EditViewMode = EditorModes::FPView;
 
+    enum class PaintToolModes
+    {
+        None,
+        Solid,
+        Open,
+        FaceTexture,
+    };
+
+    PaintToolModes PaintToolMode = PaintToolModes::None;
+
     void DrawMapMode(MapVisibilitySet& viewSet);
 
     void Check3DViewPick(MapVisibilitySet& viewSet);
 
-    int ToolbarHeight = 34;
+    float ToolbarHeight = 34;
+    float SidebarWidth = 200;
 
 protected:
 	void ShowToolbar();
+    void ShowSidebar();
 
     void SetViewMode(EditorModes mode);
 
@@ -39,6 +51,19 @@ protected:
     bool ValidClickPoint(const Vector2& position) const;
     Vector2 MouseToMap(Vector2 position) const;
     std::vector<int> GetCellsInRect(const Vector2& min, const Vector2& max);
+
+    enum class ActiveTabs
+    {
+        Edit,
+        Paint,
+        Items,
+    };
+
+    ActiveTabs ActiveTab = ActiveTabs::Edit;
+
+    void ShowEditPanel(const Rectangle& bounds);
+    void ShowPaintPanel(const Rectangle& bounds);
+    void ShowItemPanel(const Rectangle& bounds);
 
 private:
 	MapRenderer& Renderer;

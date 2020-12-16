@@ -74,8 +74,7 @@ namespace MapEditor
 			{
 				cell->CellTextures[dir] = MapPointer->AddMaterial(DefaultWallTexture);
 				return true;
-			}
-				
+			}	
 		}
 		else
 		{
@@ -119,7 +118,7 @@ namespace MapEditor
 				cell->CellTextures[Directions::YNeg] = MapPointer->AddMaterial(DefaultFloorTexture);
 
 			itr = cell->CellTextures.find(Directions::YPos);
-			if (itr != cell->CellTextures.end())
+			if (itr == cell->CellTextures.end())
 				cell->CellTextures[Directions::YPos] = MapPointer->AddMaterial(DefaultCeilingtexture);
 		}
 
@@ -307,6 +306,8 @@ namespace MapEditor
 					{
 						PreviousState.emplace_back(EditFace(dir, id, cell->Ceiling));
 						cell->Ceiling = std::get<2>(f);
+						if (cell->Floor != 255 && cell->Ceiling < 1)
+							cell->Ceiling = 1;
 					}
 
 					affectedCells.push_back(id);
@@ -382,6 +383,31 @@ namespace MapEditor
 		PushEdit(command);
 	}
 
+	void SetCellFloors(GridCell* cell, uint8_t floor)
+	{
+        SetCellHeight::Ptr command = SetCellHeight::Create();
+
+        if (DoForeachSelectedCell(cell, [command, floor](GridCell* cellptr)
+            {
+				int ceiling = cellptr->Floor + cellptr->Ceiling;
+				ceiling = ceiling - floor;
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, floor));
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, ceiling));
+            }))
+        PushEdit(command);
+	}
+
+	void SetCellCeilings(GridCell* cell, uint8_t ceiling)
+	{
+        SetCellHeight::Ptr command = SetCellHeight::Create();
+
+        if (DoForeachSelectedCell(cell, [command, ceiling](GridCell* cellptr)
+            {
+                command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, ceiling));
+            }))
+            PushEdit(command);
+	}
+
 	void IncrementCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling)
 	{
         SetCellHeight::Ptr command = SetCellHeight::Create();
@@ -392,5 +418,28 @@ namespace MapEditor
                 command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, cellptr->Ceiling + ceiling));
             }))
         PushEdit(command);
+	}
+
+	void SetCellSolid(GridCell* cell, bool solid)
+	{
+        SetCellHeight::Ptr command = SetCellHeight::Create();
+
+        if (DoForeachSelectedCell(cell, [command, solid](GridCell* cellptr)
+            {
+				if (cellptr->IsSolid() == solid)
+					return;
+
+				if (solid)
+				{
+                    command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, 255));
+                    command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, 0));
+				}
+				else
+				{
+					command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, 128));
+					command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, 16));
+				}
+            }))
+            PushEdit(command);
 	}
 }

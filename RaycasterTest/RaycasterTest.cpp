@@ -94,7 +94,7 @@ void Setup()
 
     Renderer.Setup(Map, scale);
 
-    MapEditor::SetDefaultTextures("textures/wall/tile065.png", "textures/wall/tile097.png", "textures/wall/tile128.png");
+    MapEditor::SetDefaultTextures("textures/wall/tile065.png", "textures/wall/tile098.png", "textures/wall/tile128.png");
 
     MapEditor::Init(Map);
     MapEditor::SetDirtyCallback([](int cell) {Renderer.BuildCellGeo(Renderer.GetCell(cell)); });

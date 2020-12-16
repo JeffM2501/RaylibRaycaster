@@ -38,6 +38,10 @@ namespace MapEditor
 
 	// topology
     void SetCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling);
+	void SetCellFloors(GridCell* cell, uint8_t floor);
+	void SetCellCeilings(GridCell* cell, uint8_t ceiling);
     void IncrementCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling);
+
+	void SetCellSolid(GridCell* cell, bool solid);
 
 }

@@ -30,7 +30,7 @@ public:
 	uint8_t Floor = 128;
 	uint8_t Ceiling = 16;
 	Vector2i Position = { 0,0 };
-	inline bool IsSolid(){ return Floor == 255; }
+	inline bool IsSolid() { return Floor == 255; }
 
 	float GetFloorValue()
 	{
