@@ -338,7 +338,6 @@ void EditorGui::ShowEditPanel(const Rectangle& bounds)
     GuiEnableTooltip();
     // paint tools
 
-
     GuiSetTooltip("No Paint");
     if (GuiToggle(buttonRect, GuiIconText(RICON_ZOOM_CENTER, nullptr), PaintToolMode == PaintToolModes::None))
     {
@@ -361,11 +360,106 @@ void EditorGui::ShowEditPanel(const Rectangle& bounds)
 
     GuiClearTooltip();
     GuiDisableTooltip();
+
+    yOffset += 34;
+    buttonRect = { headerOffset, yOffset, 70, 30 };
+
+    if (ConditionalButton(buttonRect, "Solid", selectionValid))
+    {
+        MapEditor::SetCellSolid(nullptr, true);
+    }
+    buttonRect.x += 72;
+
+    if (ConditionalButton(buttonRect, "Open", selectionValid))
+    {
+        MapEditor::SetCellSolid(nullptr, false);
+    }
 }
 
 void EditorGui::ShowPaintPanel(const Rectangle& bounds)
 {
     bool selectionValid = MapEditor::GetSelectedCells().size() > 0;
+
+    // texture selection panel
+    Rectangle textueRect = { bounds.x + 2, bounds.y + 2, bounds.width - 4, 400 };
+    GuiPanel(textueRect);
+
+    float nominalTxSize = 60;
+    int gridXCount = (int)std::floor(textueRect.width / nominalTxSize);
+    int gridYCount = (int)std::floor(textueRect.height / nominalTxSize);
+
+    float txGridWidth = textueRect.width / gridXCount;
+    float txGridHeight = textueRect.height / gridYCount;
+
+    int indexOffset = 0;
+    for (int y = 0; y < gridYCount; ++y)
+    {
+        for (int x = 0; x < gridXCount; ++x)
+        {
+            int index = indexOffset + VissibleTextureIndex;
+            if (index < TextureCache.size())
+            {
+                size_t tx = TextureCache[index];
+
+                Rectangle txRect = { x * txGridWidth + textueRect.x, y * txGridHeight + textueRect.y, nominalTxSize,nominalTxSize };
+                if (GuiImageButton(txRect, nullptr, ResourceManager::GetTexture(tx)))
+                {
+                    SelectedTextureIndex = index;
+                }
+                else
+                {
+                    if (index == SelectedTextureIndex)
+                    {
+                        DrawRectangleLinesEx(txRect, 3, BLUE);
+                        DrawRectangleLinesEx(txRect, 2, BLACK);
+                        DrawRectangleLinesEx(txRect, 1, WHITE);
+                    }
+                }               
+            }
+            ++indexOffset;
+        }
+    }
+
+    int texturePageCount = gridXCount * gridYCount;
+
+    Rectangle buttonRect = { textueRect.x, textueRect.y + textueRect.height + 2, 30,30 };
+
+    // nav buttons
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_LEFT_FILL, nullptr), VissibleTextureIndex != 0))
+    {
+        VissibleTextureIndex -= texturePageCount;
+    }
+
+    buttonRect = { buttonRect.x + buttonRect.width+2 , buttonRect.y, 90, 30 };
+    if (SelectedTextureIndex >= 0)
+    {
+        GuiLabel(buttonRect, ResourceManager::GetAssetName(TextureCache[SelectedTextureIndex]).c_str());
+    }
+    
+    buttonRect = { textueRect.x + textueRect.width - 30, textueRect.y + textueRect.height + 2, 30,30 };
+    if (ConditionalButton(buttonRect, GuiIconText(RICON_ARROW_RIGHT_FILL, nullptr), VissibleTextureIndex < TextureCache.size()-texturePageCount))
+    {
+        VissibleTextureIndex += texturePageCount;
+    }
+
+
+    buttonRect = { textueRect.x, buttonRect.y + buttonRect.height + 2, 30, 30 };
+
+    // paint tools
+
+    GuiSetTooltip("No Paint");
+    if (GuiToggle(buttonRect, GuiIconText(RICON_ZOOM_CENTER, nullptr), PaintToolMode == PaintToolModes::None))
+    {
+        PaintToolMode = PaintToolModes::None;
+    }
+    buttonRect.x += 32;
+
+    GuiSetTooltip("Paint Solid");
+    if (GuiToggle(buttonRect, GuiIconText(RICON_BRUSH_PAINTER, nullptr), PaintToolMode == PaintToolModes::FaceTexture))
+    {
+        PaintToolMode = PaintToolModes::FaceTexture;
+    }
+    buttonRect.x += 32;
 }
 
 void EditorGui::ShowItemPanel(const Rectangle& bounds)
@@ -393,6 +487,13 @@ void EditorGui::Show()
     ApplyPopup();
 
     GuiUnlock();
+}
+
+void EditorGui::AddTextureFolder(const std::string& path)
+{
+    auto assetIDs = ResourceManager::GetAssetIDs(path);
+    for (auto& item : assetIDs)
+        TextureCache.emplace_back(item);
 }
 
 bool EditorGui::ValidClickPoint(const Vector2& position) const
@@ -588,7 +689,6 @@ void EditorGui::DrawSelection(MapVisibilitySet& viewSet)
     }
 }
 
-
 void EditorGui::DrawMapMode(MapVisibilitySet& viewSet)
 {
     HandleDrag();
@@ -601,7 +701,6 @@ void EditorGui::DrawMapMode(MapVisibilitySet& viewSet)
     DrawMap();
     DrawSelection(viewSet);
     EndMode2D();
-
 
     if (InSelectDrag)
     {
@@ -627,9 +726,19 @@ void EditorGui::Check3DViewPick(MapVisibilitySet& viewSet)
     if (IsMouseButtonPressed(0))
     {
         bool add = ShiftIsDown();
-
         auto results = MapPicker::PickFace(Renderer, viewSet, pos);
-        if (results.CellIndex >= 0)
-            MapEditor::SelectCell(results.CellIndex,add);
+
+        if (results.CellIndex < 0)
+            return;
+
+        if (PaintToolMode == PaintToolModes::FaceTexture)
+        {
+            MapEditor::SetCellFaceMaterial(Renderer.MapPointer->GetCell(results.CellIndex), results.FaceDirection, ResourceManager::GetAssetName(TextureCache[SelectedTextureIndex]));
+        }
+        else
+        {
+            MapEditor::SelectCell(results.CellIndex, add);
+        }
+
     }
 }

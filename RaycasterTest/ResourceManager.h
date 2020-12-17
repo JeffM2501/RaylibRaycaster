@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
 #include "raylib.h"
 
 namespace ResourceManager
@@ -9,6 +11,8 @@ namespace ResourceManager
     void Cleanup();
 
     size_t GetAssetID(const std::string& path);
+    const std::string& GetAssetName(size_t id);
+
     std::string GetAssetPath(const std::string& path);
 
     const Texture2D& GetTexture(const std::string& path);
@@ -19,4 +23,6 @@ namespace ResourceManager
 
     void Unload(const std::string& path);
     void Unload(size_t id);
+
+    std::vector<size_t> GetAssetIDs(const std::string& path);
 }

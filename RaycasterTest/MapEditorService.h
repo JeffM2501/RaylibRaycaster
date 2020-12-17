@@ -41,7 +41,9 @@ namespace MapEditor
 	void SetCellFloors(GridCell* cell, uint8_t floor);
 	void SetCellCeilings(GridCell* cell, uint8_t ceiling);
     void IncrementCellHeights(GridCell* cell, uint8_t floor, uint8_t ceiling);
-
 	void SetCellSolid(GridCell* cell, bool solid);
+
+	// texturing
+	void SetCellFaceMaterial(GridCell* cell, Directions face, const std::string& material);
 
 }

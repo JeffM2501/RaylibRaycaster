@@ -182,6 +182,11 @@ void MapRenderer::Setup(GridMap::Ptr map, float scale)
     DrawScale = scale;
     MapPointer = map;
 
+    MapPointer->MaterialAdded = GridMap::MaterialFunction([this](size_t id, const std::string& path)
+        {
+            SetupTexture(ResourceManager::GetAssetID(path));
+        });
+
     float maxMapSize = Vector2Length(Vector2{ float(map->GetSize().x), float(map->GetSize().y) });
 
     Vector2 v1 = { 1,0 };

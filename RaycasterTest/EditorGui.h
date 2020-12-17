@@ -10,6 +10,8 @@ class EditorGui
 public:
 	EditorGui(MapRenderer& renderer);
 
+    void AddTextureFolder(const std::string& path);
+
 	void Show();
 
     enum class EditorModes
@@ -35,7 +37,7 @@ public:
     void Check3DViewPick(MapVisibilitySet& viewSet);
 
     float ToolbarHeight = 34;
-    float SidebarWidth = 200;
+    float SidebarWidth = 250;
 
 protected:
 	void ShowToolbar();
@@ -64,6 +66,10 @@ protected:
     void ShowEditPanel(const Rectangle& bounds);
     void ShowPaintPanel(const Rectangle& bounds);
     void ShowItemPanel(const Rectangle& bounds);
+
+    std::vector<size_t> TextureCache;
+    int VissibleTextureIndex = 0;
+    int SelectedTextureIndex = -1;
 
 private:
 	MapRenderer& Renderer;

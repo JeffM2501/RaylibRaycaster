@@ -6,6 +6,7 @@ namespace ResourceManager
     std::string RootPath;
 
     std::map<size_t, std::string> AssetIDFilePaths;
+    std::map<size_t, std::string> AssetNames;
 
     std::map<size_t, Texture2D> TextureList;
     std::map<size_t, Image> ImageList;
@@ -58,14 +59,40 @@ namespace ResourceManager
         size_t h = HashPath(path);
         if (AssetIDFilePaths.find(h) == AssetIDFilePaths.end())
         {
+            AssetNames[h] = path;
             AssetIDFilePaths[h] = GetOSPath(path);
         }
         return h;
     }
 
+    std::string InvalidPath;
+
+    const std::string& GetAssetName(size_t id)
+    {
+        if (AssetNames.find(id) == AssetNames.end())
+            return InvalidPath;
+
+        return AssetNames[id];
+    }
+
     std::string GetAssetPath(const std::string& path)
     {
         return GetOSPath(path);
+    }
+
+    std::vector<size_t> GetAssetIDs(const std::string& path)
+    {
+        int count = 0;
+        char** files = GetDirectoryFiles(GetOSPath(path).c_str(), &count);
+       
+        std::vector<size_t> ids;
+        
+        for (int i = 0; i < count; ++i)
+        {
+            ids.push_back(GetAssetID(path + files[i]));
+        }
+        ClearDirectoryFiles();
+        return ids;
     }
 
     const Texture2D& GetTexture(const std::string& path)

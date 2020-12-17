@@ -107,6 +107,8 @@ void Setup()
     BackgroundImage = ResourceManager::GetTexture("textures/Gradient.png");
 
     Editor = std::make_shared<EditorGui>(Renderer);
+    Editor->AddTextureFolder("textures/wall/");
+    Editor->AddTextureFolder("textures/floor/");
 }
 
 void UpdateInput()

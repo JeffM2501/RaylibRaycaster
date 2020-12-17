@@ -7,7 +7,6 @@
 namespace MapEditor
 {
 	CellCallback DirtyCallback = nullptr;
-
 	std::string DefaultWallTexture;
 	std::string DefaultFloorTexture;
 	std::string DefaultCeilingtexture;
@@ -66,6 +65,9 @@ namespace MapEditor
 
 	bool CheckFaceWall(GridCell* cell, Directions dir)
 	{
+		if (cell == nullptr)
+			return false;
+
 		std::map<Directions, size_t>::iterator itr = cell->CellTextures.find(dir);
 
 		if (CellNeedsWall(cell, dir))
@@ -122,17 +124,33 @@ namespace MapEditor
 				cell->CellTextures[Directions::YPos] = MapPointer->AddMaterial(DefaultCeilingtexture);
 		}
 
-		CheckFaceWall(MapPointer->GetCell(cell->Position.x + 1, cell->Position.y), Directions::XNeg);
-		newDirty.push_back(MapPointer->GetCell(cell->Position.x + 1, cell->Position.y)->Index);
+		GridCell* sibCell = MapPointer->GetCell(cell->Position.x + 1, cell->Position.y);
+		if (sibCell != nullptr)
+		{
+			CheckFaceWall(sibCell, Directions::XNeg);
+			newDirty.push_back(sibCell->Index);
+		}
 
-		CheckFaceWall(MapPointer->GetCell(cell->Position.x - 1, cell->Position.y), Directions::XPos);
-		newDirty.push_back(MapPointer->GetCell(cell->Position.x - 1, cell->Position.y)->Index);
+		sibCell = MapPointer->GetCell(cell->Position.x - 1, cell->Position.y);
+        if (sibCell != nullptr)
+        {
+            CheckFaceWall(sibCell, Directions::XPos);
+            newDirty.push_back(sibCell->Index);
+        }
 
-		CheckFaceWall(MapPointer->GetCell(cell->Position.x, cell->Position.y + 1), Directions::ZNeg);
-		newDirty.push_back(MapPointer->GetCell(cell->Position.x, cell->Position.y + 1)->Index);
+		sibCell = MapPointer->GetCell(cell->Position.x, cell->Position.y + 1);
+        if (sibCell != nullptr)
+        {
+            CheckFaceWall(sibCell, Directions::ZNeg);
+            newDirty.push_back(sibCell->Index);
+        }
 
-		CheckFaceWall(MapPointer->GetCell(cell->Position.x, cell->Position.y - 1), Directions::ZPos);
-		newDirty.push_back(MapPointer->GetCell(cell->Position.x, cell->Position.y - 1)->Index);
+		sibCell = MapPointer->GetCell(cell->Position.x, cell->Position.y - 1);
+        if (sibCell != nullptr)
+        {
+            CheckFaceWall(sibCell, Directions::ZPos);
+            newDirty.push_back(sibCell->Index);
+        }
 
 		return newDirty;
 	}
@@ -344,11 +362,6 @@ namespace MapEditor
 		}
 	};
 
-	void AddCellHeightChange(SetCellHeight::Ptr command, GridCell* cell, uint8_t floor, uint8_t ceiling)
-	{
-       
-	}
-
 	bool DoForeachSelectedCell(GridCell* cell, std::function<void(GridCell*)> func)
 	{
 		if (func == nullptr || MapPointer == nullptr)
@@ -439,6 +452,77 @@ namespace MapEditor
 					command->Edits.push_back(SetCellHeight::EditFace(Directions::YNeg, cellptr->Index, 128));
 					command->Edits.push_back(SetCellHeight::EditFace(Directions::YPos, cellptr->Index, 16));
 				}
+            }))
+            PushEdit(command);
+	}
+
+	// textures
+
+    class SetFaceMaterial : public EditAction
+    {
+    public:
+        using Ptr = std::shared_ptr<SetFaceMaterial>;
+        static Ptr Create() { return std::make_shared<SetFaceMaterial>(); }
+
+        using EditFace = std::tuple<Directions, int, size_t>;
+        std::vector<EditFace> Edits;
+
+        std::vector<EditFace> PreviousState;
+
+        std::vector<int> Redo(GridMap::Ptr map) override
+        {
+            std::vector<int> affectedCells;
+            PreviousState.clear();
+
+            for (auto& f : Edits)
+            {
+                Directions dir = std::get<0>(f);
+                int id = std::get<1>(f);
+                auto cell = map->GetCell(id);
+				size_t material = std::get<2>(f);
+
+                if (cell != nullptr)
+                {
+					PreviousState.emplace_back(EditFace(dir, id, cell->CellTextures[dir]));
+					cell->CellTextures[dir] = material;
+                    affectedCells.push_back(id);
+                }
+            }
+
+            return affectedCells;
+        }
+
+        std::vector<int> Undo(GridMap::Ptr map) override
+        {
+            std::vector<int> affectedCells;
+            for (auto& f : PreviousState)
+            {
+                Directions dir = std::get<0>(f);
+                int id = std::get<1>(f);
+                auto cell = map->GetCell(id);
+				size_t material = std::get<2>(f);
+
+                if (cell != nullptr)
+                {
+					cell->CellTextures[dir] = material;
+
+                    affectedCells.push_back(id);
+                }
+            }
+
+            return affectedCells;
+        }
+    };
+
+	void SetCellFaceMaterial(GridCell* cell, Directions face, const std::string& material)
+	{
+		SetFaceMaterial::Ptr command = SetFaceMaterial::Create();
+
+		size_t matId = MapPointer->AddMaterial(material);
+
+        if (DoForeachSelectedCell(cell, [command, face, matId](GridCell* cellptr)
+            {
+                command->Edits.push_back(SetFaceMaterial::EditFace(face, cellptr->Index, matId));
             }))
             PushEdit(command);
 	}
