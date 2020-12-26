@@ -37,19 +37,19 @@ void GridMap::LoadFromImage(const Image& image, float scale, size_t walls, size_
 			if (!cell->IsSolid())
 			{
 				if (x != 0 && PixelIsSolid(x - 1, y, imageData, Size.x))			// west side is closed, add a wall
-					cell->CellTextures[Directions::XNeg] = walls;
+					cell->CellTextures[Directions::XNeg].MaterialID = walls;
  
  				if (x != Size.x -1 && PixelIsSolid(x + 1, y, imageData, Size.x))	// east side is closed, add a wall
- 					cell->CellTextures[Directions::XPos] = walls;
+ 					cell->CellTextures[Directions::XPos].MaterialID = walls;
 
 				if (y != 0 && PixelIsSolid(x, y - 1, imageData, Size.x))			// north side is closed, add a wall
-					cell->CellTextures[Directions::ZNeg] = walls;
+					cell->CellTextures[Directions::ZNeg].MaterialID = walls;
 
 				if (y != Size.y - 1 && PixelIsSolid(x, y+1, imageData, Size.x))	// east side is closed, add a wall
-					cell->CellTextures[Directions::ZPos] = walls;
+					cell->CellTextures[Directions::ZPos].MaterialID = walls;
 
-				cell->CellTextures[Directions::YNeg] = floor;
-				cell->CellTextures[Directions::YPos] = ceiling;
+				cell->CellTextures[Directions::YNeg].MaterialID = floor;
+				cell->CellTextures[Directions::YPos].MaterialID = ceiling;
 			}
 		}
 	}
@@ -146,7 +146,9 @@ bool GridMap::LoadFromFile(const std::string& path)
 					int matId = 0;
 					fread(&matId, sizeof(int), 1, fp);
 
-					cell.CellTextures.emplace((Directions)dir, matId);
+					FaceInfo info;
+					info.MaterialID = matId;
+					cell.CellTextures.emplace((Directions)dir, info);
 				}
 			}
 
@@ -206,8 +208,17 @@ void GridMap::SaveToFile(const std::string& path)
 				uint8_t d = (uint8_t)face.first;
 				fwrite(&d, sizeof(uint8_t), 1, fp);
 
-				size = (int)face.second;
+				size = (int)face.second.MaterialID;
 				fwrite(&size, sizeof(int), 1, fp);
+
+                uint8_t r = (uint8_t)face.second.RotationIndex;
+                fwrite(&r, sizeof(uint8_t), 1, fp);
+
+                int8_t u = (int8_t)face.second.UOffset;
+                fwrite(&u, sizeof(uint8_t), 1, fp);
+
+				int8_t v = (int8_t)face.second.VOffset;
+                fwrite(&v, sizeof(uint8_t), 1, fp);
 			}
 		}
 	}

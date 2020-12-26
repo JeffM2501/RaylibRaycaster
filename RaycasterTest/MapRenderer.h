@@ -131,7 +131,7 @@ private:
 
     void AddVisCell(RenderCell* cell, MapVisibilitySet& viewSet);
 
-    RenderFace MakeFace(Directions dir, CellParams* params, size_t material);
+    RenderFace MakeFace(Directions dir, CellParams* params, FaceInfo& faceInfo);
 
     void DrawCell(RenderCell* cell, MapVisibilitySet& viewSet);
     void DrawFaces(MapVisibilitySet& viewSet);

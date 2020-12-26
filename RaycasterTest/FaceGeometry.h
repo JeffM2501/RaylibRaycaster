@@ -13,7 +13,26 @@ public:
 
     float top = 0;
     float bottom = 0;
+
+    FaceInfo faceInfo;
 };
+
+
+inline void RotateUVs(float texcoords[], int rotationIndex = 0)
+{
+    if (rotationIndex == 0)
+        return;
+
+    Matrix rotMat = MatrixRotateZ(rotationIndex * 90.0f);
+
+    for (int i = 0; i < 4; i += 2)
+    {
+        Vector3 t = Vector3Transform(Vector3{ texcoords[i],texcoords[i + 1],0 }, rotMat);
+
+        texcoords[i] = t.x;
+        texcoords[i + 1] = t.y;
+    }
+}
 
 inline void GenCeilingMesh(Mesh* mesh, void* userData)
 {
@@ -39,6 +58,8 @@ inline void GenCeilingMesh(Mesh* mesh, void* userData)
         1,1,
         0,1,
     };
+
+    RotateUVs(texcoords, data->faceInfo.RotationIndex);
 
     float normals[] =
     {
@@ -88,8 +109,8 @@ inline void GenFloorMesh(Mesh* mesh, void* userData)
         1,0,
         0,1,
         1,1
-
     };
+    RotateUVs(texcoords, data->faceInfo.RotationIndex);
 
     float normals[] =
     {

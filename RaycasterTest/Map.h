@@ -22,11 +22,23 @@ enum class Directions
 
 constexpr float DepthIncrement = 0.0625f;
 
+class FaceInfo
+{
+public: 
+	size_t MaterialID = 0;
+	uint8_t RotationIndex = 0;
+    int8_t UOffset = 0;
+    int8_t VOffset = 0;
+
+	FaceInfo() {}
+	FaceInfo(size_t material) : MaterialID(material) {};
+};
+
 class GridCell
 {
 public:
 	int Index = 0;
-	std::map<Directions, size_t>  CellTextures;
+	std::map<Directions, FaceInfo>  CellTextures;
 	uint8_t Floor = 128;
 	uint8_t Ceiling = 16;
 	Vector2i Position = { 0,0 };

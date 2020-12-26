@@ -68,13 +68,15 @@ namespace MapEditor
 		if (cell == nullptr)
 			return false;
 
-		std::map<Directions, size_t>::iterator itr = cell->CellTextures.find(dir);
+		std::map<Directions, FaceInfo>::iterator itr = cell->CellTextures.find(dir);
 
 		if (CellNeedsWall(cell, dir))
 		{
 			if (itr == cell->CellTextures.end())
 			{
-				cell->CellTextures[dir] = MapPointer->AddMaterial(DefaultWallTexture);
+				FaceInfo info;
+				info.MaterialID = MapPointer->AddMaterial(DefaultWallTexture);
+				cell->CellTextures[dir] = info;
 				return true;
 			}	
 		}
@@ -105,7 +107,7 @@ namespace MapEditor
 
 		if (cell->IsSolid())
 		{
-			std::map<Directions, size_t>::iterator itr = cell->CellTextures.find(Directions::YNeg);
+			std::map<Directions, FaceInfo>::iterator itr = cell->CellTextures.find(Directions::YNeg);
 			if (itr != cell->CellTextures.end())
 				cell->CellTextures.erase(itr);
 
@@ -115,13 +117,13 @@ namespace MapEditor
 		}
 		else
 		{
-			std::map<Directions, size_t>::iterator itr = cell->CellTextures.find(Directions::YNeg);
+			std::map<Directions, FaceInfo>::iterator itr = cell->CellTextures.find(Directions::YNeg);
 			if (itr == cell->CellTextures.end())
-				cell->CellTextures[Directions::YNeg] = MapPointer->AddMaterial(DefaultFloorTexture);
+				cell->CellTextures[Directions::YNeg] = FaceInfo(MapPointer->AddMaterial(DefaultFloorTexture));
 
 			itr = cell->CellTextures.find(Directions::YPos);
 			if (itr == cell->CellTextures.end())
-				cell->CellTextures[Directions::YPos] = MapPointer->AddMaterial(DefaultCeilingtexture);
+				cell->CellTextures[Directions::YPos] = (MapPointer->AddMaterial(DefaultCeilingtexture));
 		}
 
 		GridCell* sibCell = MapPointer->GetCell(cell->Position.x + 1, cell->Position.y);
@@ -483,7 +485,7 @@ namespace MapEditor
 
                 if (cell != nullptr)
                 {
-					PreviousState.emplace_back(EditFace(dir, id, cell->CellTextures[dir]));
+					PreviousState.emplace_back(EditFace(dir, id, cell->CellTextures[dir].MaterialID));
 					cell->CellTextures[dir] = material;
                     affectedCells.push_back(id);
                 }

@@ -649,7 +649,7 @@ void EditorGui::DrawMap()
 
             if (!cell->MapCell->IsSolid())
             {
-                auto& texture = ResourceManager::GetTexture(Renderer.MapPointer->MaterialList[cell->MapCell->CellTextures[Directions::YNeg]]);
+                auto& texture = ResourceManager::GetTexture(Renderer.MapPointer->MaterialList[cell->MapCell->CellTextures[Directions::YNeg].MaterialID]);
                 DrawTexturePro(texture, Rectangle{ 0, 0,(float)texture.width,(float)texture.height },
                                         Rectangle{ (float)localX, (float)localY, (float)MapGridSize, (float)MapGridSize },
                                         Vector2{ 0, 0 }, 0, WHITE);

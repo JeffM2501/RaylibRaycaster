@@ -93,12 +93,14 @@ RenderCell* MapRenderer::GetDirectionCell(RenderCell* sourceCell, Directions dir
     return GetCell(sourceCell->MapCell->Position.x + xOffset, sourceCell->MapCell->Position.y + yOffset);
 }
 
-RenderFace MapRenderer::MakeFace(Directions dir, CellParams* params, size_t material)
+RenderFace MapRenderer::MakeFace(Directions dir, CellParams* params, FaceInfo& faceInfo)
 {
     RenderFace face;
 
+    params->faceInfo = faceInfo;
+
 	face.FaceMesh = GenMeshCustom(CallbackForDir(dir), params);
-	face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[material], DirectionColors[dir]);
+	face.FaceMaterial = MaterialManager::LoadTextureMaterial(MapPointer->MaterialList[faceInfo.MaterialID], DirectionColors[dir]);
 
     return face;
 }
@@ -132,7 +134,7 @@ void MapRenderer::BuildCellGeo(RenderCell* cell)
 
         if (dir == Directions::YNeg || dir == Directions::YPos)
         {
-			cell->RenderFaces.emplace_back(MakeFace(dir,&params,cellFace.second));
+			cell->RenderFaces.emplace_back(MakeFace(dir,&params, cellFace.second));
         }
         else
         {
